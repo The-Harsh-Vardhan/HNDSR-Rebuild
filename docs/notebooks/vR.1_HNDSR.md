@@ -4,6 +4,13 @@
 
 `vR.1 HNDSR` is the first immutable Kaggle notebook in the scratch lineage. Its job is not to chase peak metrics yet. Its job is to prove that the rebuild track can train, evaluate, export artifacts, and log stable metadata on Kaggle without notebook-only model logic.
 
+Completed outcome:
+
+- Kaggle/W&B contract: passed
+- Assigned GPU in the canonical run: `Tesla T4`
+- Model outcome: failed baseline
+- Freeze decision: keep `vR.1` immutable and move `vR.2` to a supervised SR reset
+
 ## Scope
 
 - Dataset lane: Kaggle `4x-satellite-image-super-resolution`
@@ -61,9 +68,19 @@
 - The notebook now checks both Kaggle working-directory mounts and the attached code-dataset mount before asserting the repo layout.
 - The attached Kaggle code dataset may arrive under nested private-dataset paths such as `/kaggle/input/datasets/<owner>/<slug>` and may contain `Mini Project.zip`; `vR.1` now recurses through the Kaggle input tree and copies any discovered repo from the read-only input mount into `/kaggle/working/HNDSR-Rebuild` before validation or training writes artifacts.
 - The runtime scripts now auto-resolve the Kaggle image dataset even when Kaggle wraps the image folders inside duplicated directories such as `/kaggle/input/4x-satellite-image-super-resolution/HR_0.5m/HR_0.5m` and `/LR_2m/LR_2m`.
-- Kaggle currently exposes a `Tesla P100` in this workflow, while the bundled PyTorch build only supports CUDA capability `7.0+`; the runtime therefore falls back to CPU automatically instead of crashing on the first bicubic interpolation call.
+- Kaggle metadata can request `GPU enabled`, but it cannot force `T4` over `P100`; the canonical `vR.1` run succeeded because the live notebook runtime landed on `Tesla T4`, not because `kernel-metadata.json` selected it.
 - `configs/phase1_sr3_vr1_kaggle.yaml` keeps `max_train_batches: null` by design; the training loop must interpret that as "unbounded" rather than crashing on a null comparison.
 - This notebook is allowed to orchestrate scripts, inspect configs, and render outputs. It is not allowed to carry unique model-training logic.
+
+## Canonical Result
+
+- Readiness run: `https://wandb.ai/hndsr/hndsr-research-track/runs/pmmbvr31`
+- Control run: `https://wandb.ai/hndsr/hndsr-research-track/runs/f7lc484h`
+- Full train run: `https://wandb.ai/hndsr/hndsr-research-track/runs/zmfev1ot`
+- Full eval run: `https://wandb.ai/hndsr/hndsr-research-track/runs/wjvc52ic`
+- Control metric: bicubic `30.6039 / 0.7365`
+- Full SR3 metric: `8.0865 / 0.0058`
+- Conclusion: `vR.1` is valid evidence but not a promotable model baseline
 
 ## Handoff Back For Review
 
