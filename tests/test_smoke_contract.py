@@ -5,6 +5,7 @@ import torch
 from PIL import Image
 
 from src.dataset import (
+    SatellitePairDataset,
     SyntheticSatellitePairDataset,
     build_loaders,
 )
@@ -125,3 +126,25 @@ def test_kaggle_pairing_lane_preserves_traceable_names():
     first_batch = next(iter(bundle.val_loader))
     assert first_batch["name"][0] in {"tile_001", "tile_002"}
     assert int(first_batch["scale"][0]) == 4
+
+
+def test_kaggle_nested_mount_layout_is_resolved(monkeypatch):
+    root = _fresh_dir("kaggle-nested-mount")
+    kaggle_input = root / "input" / "4x-satellite-image-super-resolution"
+    hr_root = kaggle_input / "HR_0.5m" / "HR_0.5m"
+    lr_root = kaggle_input / "LR_2m" / "LR_2m"
+    _write_fake_image(hr_root / "tile_001.tif", (220, 40, 40), size=(96, 96))
+    _write_fake_image(lr_root / "tile_001.tif", (200, 30, 30), size=(24, 24))
+    _write_fake_image(hr_root / "tile_002.tif", (120, 80, 40), size=(96, 96))
+    _write_fake_image(lr_root / "tile_002.tif", (110, 70, 30), size=(24, 24))
+    monkeypatch.setenv("HNDSR_KAGGLE_INPUT_ROOT", str(root / "input"))
+    dataset = SatellitePairDataset(
+        hr_dir="data/kaggle_4x/HR_0.5m",
+        lr_dir="data/kaggle_4x/LR_2m",
+        patch_size=64,
+        training=False,
+    )
+    assert len(dataset) == 2
+    sample = dataset[0]
+    assert sample["name"] in {"tile_001", "tile_002"}
+    assert sample["scale"] == 4

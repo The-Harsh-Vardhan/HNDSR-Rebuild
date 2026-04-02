@@ -101,6 +101,7 @@ Then:
 2. Confirm the updated version appears at `harshv777/hndsr-mini-project-code`
 3. Keep the dataset ID unchanged across notebook versions
 4. Re-upload the repo dataset after any same-version Kaggle runtime patch if the notebook still delegates to repo-owned scripts under `/kaggle/input`
+5. The runtime loader now resolves Kaggle image mounts automatically when `HR_0.5m` and `LR_2m` are wrapped inside duplicated directories under `/kaggle/input`
 
 ### Step 3: Create New Notebook Version
 1. Finish the current version review first.
@@ -151,6 +152,12 @@ The notebook or validator is still using the attached repo dataset directly inst
 1. Re-upload `harshv777/hndsr-mini-project-code` from the latest repo commit.
 2. Re-push the same notebook version after the dataset upload finishes.
 3. Confirm the runtime diagnostics show the repo under `/kaggle/working/HNDSR-Rebuild` before training starts.
+
+### "No paired images found in data/kaggle_4x/HR_0.5m and data/kaggle_4x/LR_2m"
+Kaggle mounted the image dataset, but not in the flat repo-local layout.
+1. Stay on `vR.1`; this is a Kaggle plumbing issue, not a new research version.
+2. Re-upload the latest repo dataset so the runtime loader patch is attached.
+3. Re-push the same notebook version after the dataset upload finishes.
 
 ### "Dataset not found" Error
 Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel-metadata.json` so both reference `harshv777/hndsr-mini-project-code`.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -10,6 +11,8 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset, Subset
+
+from src.utils import repo_path
 
 
 IMAGE_EXTENSIONS = (
@@ -46,6 +49,13 @@ def _collect_images(root: Path) -> list[Path]:
     return sorted(images)
 
 
+def _has_direct_images(root: Path) -> bool:
+    for pattern in IMAGE_EXTENSIONS:
+        if any(root.glob(pattern)):
+            return True
+    return False
+
+
 def _trace_name(root: Path, path: Path) -> str:
     relative = path.relative_to(root)
     return "__".join(relative.with_suffix("").parts)
@@ -55,6 +65,56 @@ def _limited_subset(dataset: Dataset, limit: int | None) -> Dataset:
     if limit is None or limit >= len(dataset):
         return dataset
     return Subset(dataset, list(range(limit)))
+
+
+def _kaggle_input_root() -> Path:
+    return Path(os.environ.get("HNDSR_KAGGLE_INPUT_ROOT", "/kaggle/input"))
+
+
+def _flatten_single_wrapper(root: Path) -> Path:
+    current = root
+    for _ in range(3):
+        if _has_direct_images(current):
+            return current
+        if not current.exists():
+            return current
+        children = [child for child in current.iterdir() if child.is_dir()]
+        if len(children) != 1 or children[0].name != current.name:
+            return current
+        current = children[0]
+    return current
+
+
+def _resolve_image_root(path: str) -> Path:
+    configured = Path(path)
+    candidates: list[Path] = []
+    if configured.is_absolute():
+        candidates.append(configured)
+    else:
+        candidates.append(repo_path(configured))
+        candidates.append(configured)
+
+    kaggle_input = _kaggle_input_root()
+    if kaggle_input.exists():
+        for candidate in sorted(kaggle_input.rglob(configured.name)):
+            if candidate.is_dir():
+                candidates.append(candidate)
+
+    seen: set[str] = set()
+    fallback = candidates[0]
+    for candidate in candidates:
+        normalized = _flatten_single_wrapper(candidate)
+        marker = str(normalized)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        if normalized.exists():
+            fallback = normalized
+        if _collect_images(normalized):
+            if normalized != configured:
+                print(f"Resolved dataset root {configured} -> {normalized}")
+            return normalized
+    return fallback
 
 
 def _split_indices(size: int, val_split: float, seed: int) -> tuple[list[int], list[int]]:
@@ -85,8 +145,8 @@ class SatellitePairDataset(Dataset):
     """Paired HR/LR dataset with deterministic filename matching."""
 
     def __init__(self, hr_dir: str, lr_dir: str, patch_size: int, training: bool) -> None:
-        self.hr_dir = Path(hr_dir)
-        self.lr_dir = Path(lr_dir)
+        self.hr_dir = _resolve_image_root(hr_dir)
+        self.lr_dir = _resolve_image_root(lr_dir)
         self.patch_size = patch_size
         self.training = training
         self.transform = _build_transform()
