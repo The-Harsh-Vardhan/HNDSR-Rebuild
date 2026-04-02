@@ -15,25 +15,38 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.dataset import build_loaders
 from src.metrics import bicubic_upscale, calculate_psnr
-from src.models import SR3Baseline
+from src.models import SR3Baseline, SupervisedResidualBaseline
 from src.tracker import init_tracker
 from src.utils import describe_run_dirs, get_device_info, load_config, prepare_workspace_temp, set_seed, write_json
 
 
-def build_model(config: dict, device: torch.device) -> SR3Baseline:
+def build_model(config: dict, device: torch.device) -> SR3Baseline | SupervisedResidualBaseline:
     """Instantiate the selected trainable baseline."""
-    if config["model"]["kind"] != "sr3":
-        raise ValueError("train_baseline.py currently supports only the sr3 baseline.")
-    model = SR3Baseline(
-        model_channels=config["model"]["model_channels"],
-        num_timesteps=config["diffusion"]["num_timesteps"],
-        beta_start=config["diffusion"]["beta_start"],
-        beta_end=config["diffusion"]["beta_end"],
-    )
+    kind = config["model"]["kind"]
+    if kind == "sr3":
+        model = SR3Baseline(
+            model_channels=config["model"]["model_channels"],
+            num_timesteps=config["diffusion"]["num_timesteps"],
+            beta_start=config["diffusion"]["beta_start"],
+            beta_end=config["diffusion"]["beta_end"],
+        )
+    elif kind == "supervised_residual":
+        model = SupervisedResidualBaseline(
+            model_channels=config["model"]["model_channels"],
+            num_blocks=config["model"].get("num_blocks", 4),
+            residual_scale=config["model"].get("residual_scale", 0.1),
+        )
+    else:
+        raise ValueError(f"train_baseline.py does not support model kind '{kind}'.")
     return model.to(device)
 
 
-def validate(model: SR3Baseline, val_loader, config: dict, device: torch.device) -> dict[str, float]:
+def validate(
+    model: SR3Baseline | SupervisedResidualBaseline,
+    val_loader,
+    config: dict,
+    device: torch.device,
+) -> dict[str, float]:
     """Run a bounded validation pass with one quick sampling check."""
     model.eval()
     losses: list[float] = []
@@ -62,6 +75,21 @@ def should_stop_after_batch(batch_idx: int, max_batches: int | None) -> bool:
     return max_batches is not None and batch_idx >= max_batches
 
 
+def build_progress_postfix(loss: torch.Tensor, stats: dict[str, float]) -> dict[str, str]:
+    """Keep the progress display stable across diffusion and supervised lanes."""
+    postfix = {"loss": f"{loss.item():.4f}"}
+    if "timesteps_mean" in stats:
+        postfix["t"] = f"{stats['timesteps_mean']:.1f}"
+    if "prediction_std" in stats:
+        postfix["pred_std"] = f"{stats['prediction_std']:.3f}"
+    return postfix
+
+
+def describe_epoch_label(config: dict) -> str:
+    """Render a stable per-epoch label for the active model lane."""
+    return config["model"]["kind"].replace("_", " ")
+
+
 def train(config: dict, run_name: str, device: torch.device, device_info: dict[str, object]) -> dict[str, object]:
     """Train the selected baseline and persist the best checkpoint."""
     dirs = describe_run_dirs(config, run_name)
@@ -77,10 +105,11 @@ def train(config: dict, run_name: str, device: torch.device, device_info: dict[s
     best_checkpoint = dirs["checkpoints"] / config["training"]["checkpoint_name"]
     history: list[dict[str, float]] = []
     max_train_batches = config["training"].get("max_train_batches")
+    epoch_label = describe_epoch_label(config)
     for epoch in range(config["training"]["epochs"]):
         model.train()
         train_losses: list[float] = []
-        progress = tqdm(bundle.train_loader, desc=f"SR3 epoch {epoch + 1}", leave=False)
+        progress = tqdm(bundle.train_loader, desc=f"{epoch_label} epoch {epoch + 1}", leave=False)
         for batch_idx, batch in enumerate(progress):
             if should_stop_after_batch(batch_idx, max_train_batches):
                 break
@@ -93,7 +122,7 @@ def train(config: dict, run_name: str, device: torch.device, device_info: dict[s
             clip_grad_norm_(model.parameters(), config["training"]["grad_clip"])
             optimizer.step()
             train_losses.append(float(loss.item()))
-            progress.set_postfix({"loss": f"{loss.item():.4f}", "t": f"{stats['timesteps_mean']:.1f}"})
+            progress.set_postfix(build_progress_postfix(loss, stats))
         validation = validate(model, bundle.val_loader, config, device)
         epoch_metrics = {
             "epoch": epoch + 1,

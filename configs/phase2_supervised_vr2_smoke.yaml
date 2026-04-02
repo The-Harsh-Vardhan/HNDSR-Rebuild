@@ -1,0 +1,26 @@
+inherits: "configs/phase2_supervised_vr2_kaggle.yaml"
+
+project:
+  group: "vR.2-smoke"
+  tags:
+    - vR.2
+    - scratch
+    - kaggle
+    - supervised
+    - residual
+    - smoke
+
+tracking:
+  mode: "offline"
+  notes: "vR.2 scratch supervised residual Kaggle smoke check"
+
+data:
+  batch_size: 2
+  train_limit: 16
+  val_limit: 8
+
+training:
+  epochs: 2
+  max_train_batches: 4
+  max_val_batches: 2
+  checkpoint_name: "vR.2_supervised_smoke.pt"

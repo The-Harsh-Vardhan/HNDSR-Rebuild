@@ -22,21 +22,35 @@ from src.metrics import (
     save_grid,
     save_strip,
 )
-from src.models import SR3Baseline
+from src.models import SR3Baseline, SupervisedResidualBaseline
 from src.tracker import init_tracker
 from src.utils import describe_run_dirs, get_device_info, load_config, prepare_workspace_temp, set_seed, write_json
 
 
-def build_model(config: dict, device: torch.device, checkpoint: str | None) -> SR3Baseline | None:
+def build_model(
+    config: dict,
+    device: torch.device,
+    checkpoint: str | None,
+) -> SR3Baseline | SupervisedResidualBaseline | None:
     """Instantiate and optionally load a checkpointed model."""
-    if config["model"]["kind"] == "bicubic":
+    kind = config["model"]["kind"]
+    if kind == "bicubic":
         return None
-    model = SR3Baseline(
-        model_channels=config["model"]["model_channels"],
-        num_timesteps=config["diffusion"]["num_timesteps"],
-        beta_start=config["diffusion"]["beta_start"],
-        beta_end=config["diffusion"]["beta_end"],
-    ).to(device)
+    if kind == "sr3":
+        model = SR3Baseline(
+            model_channels=config["model"]["model_channels"],
+            num_timesteps=config["diffusion"]["num_timesteps"],
+            beta_start=config["diffusion"]["beta_start"],
+            beta_end=config["diffusion"]["beta_end"],
+        ).to(device)
+    elif kind == "supervised_residual":
+        model = SupervisedResidualBaseline(
+            model_channels=config["model"]["model_channels"],
+            num_blocks=config["model"].get("num_blocks", 4),
+            residual_scale=config["model"].get("residual_scale", 0.1),
+        ).to(device)
+    else:
+        raise ValueError(f"evaluate_run.py does not support model kind '{kind}'.")
     if checkpoint is None:
         return model
     payload = torch.load(checkpoint, map_location=device, weights_only=False)
@@ -45,7 +59,12 @@ def build_model(config: dict, device: torch.device, checkpoint: str | None) -> S
     return model
 
 
-def infer_sample(model: SR3Baseline | None, lr: torch.Tensor, scale: int, config: dict) -> torch.Tensor:
+def infer_sample(
+    model: SR3Baseline | SupervisedResidualBaseline | None,
+    lr: torch.Tensor,
+    scale: int,
+    config: dict,
+) -> torch.Tensor:
     """Infer a single batch for either the bicubic or SR3 baseline."""
     lr_upscaled = bicubic_upscale(lr, scale)
     if model is None:

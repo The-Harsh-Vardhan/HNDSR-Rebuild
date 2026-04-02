@@ -1,7 +1,7 @@
 {
-  "id": "harshv777/vr-1-hndsr-sr3-baseline",
-  "title": "vR.1 HNDSR SR3 Baseline",
-  "code_file": "vR.1_HNDSR.ipynb",
+  "id": "harshv777/vr-2-hndsr-supervised-baseline",
+  "title": "vR.2 HNDSR Supervised Baseline",
+  "code_file": "vR.2_HNDSR.ipynb",
   "language": "python",
   "kernel_type": "notebook",
   "is_private": true,

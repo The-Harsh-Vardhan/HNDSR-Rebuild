@@ -7,11 +7,11 @@ from src.kaggle_contract import (
 )
 
 
-def test_kernel_metadata_matches_vr1_notebook():
+def test_kernel_metadata_matches_vr2_notebook():
     metadata = load_kernel_metadata()
-    failures = validate_kernel_metadata("vR.1", metadata)
+    failures = validate_kernel_metadata("vR.2", metadata)
     assert failures == []
-    assert metadata["code_file"] == "vR.1_HNDSR.ipynb"
+    assert metadata["code_file"] == "vR.2_HNDSR.ipynb"
 
 
 def test_dataset_metadata_matches_code_dataset_contract():

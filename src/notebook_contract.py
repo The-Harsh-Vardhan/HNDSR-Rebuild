@@ -9,10 +9,9 @@ from .tracker import init_tracker
 from .utils import load_config, prepare_workspace_temp, repo_path
 
 
-REQUIRED_NOTEBOOK_SECTIONS = (
+COMMON_NOTEBOOK_SECTIONS = (
     "## Runtime Compatibility Check",
     "## Post-Restart GPU Sanity Check",
-    "# vR.1 HNDSR",
     "## Experiment Registry",
     "## Paper Lineage and Hypothesis",
     "## Dataset and Config Contract",
@@ -25,17 +24,13 @@ REQUIRED_NOTEBOOK_SECTIONS = (
     "## Next Step Gate",
 )
 
-REQUIRED_NOTEBOOK_COMMANDS = (
+COMMON_NOTEBOOK_COMMANDS = (
     "scripts/validate_notebook_version.py",
     "scripts/train_baseline.py",
     "scripts/evaluate_run.py",
-    "phase1_sr3_vr1_kaggle.yaml",
-    "phase1_sr3_vr1_smoke.yaml",
-    "HNDSR_REQUIRE_WANDB_AUTH",
 )
 
-REQUIRED_DOC_SECTIONS = (
-    "# vR.1 HNDSR",
+COMMON_DOC_SECTIONS = (
     "## Objective",
     "## Kaggle Run Guide",
     "## Config Contract",
@@ -43,8 +38,7 @@ REQUIRED_DOC_SECTIONS = (
     "## Handoff Back For Review",
 )
 
-REQUIRED_REVIEW_SECTIONS = (
-    "# vR.1 HNDSR Review",
+COMMON_REVIEW_SECTIONS = (
     "## Status",
     "## Run Intake",
     "## Audit Checklist",
@@ -86,18 +80,24 @@ def validate_versioned_notebook(
     notebook_text = _load_notebook_text(notebook_path)
     doc_text = _load_text(doc_path)
     review_text = _load_text(review_path)
-
-    failures.extend(_missing_fragments(notebook_text, REQUIRED_NOTEBOOK_SECTIONS, "Notebook"))
-    failures.extend(_missing_fragments(notebook_text, REQUIRED_NOTEBOOK_COMMANDS, "Notebook"))
-    failures.extend(_missing_fragments(doc_text, REQUIRED_DOC_SECTIONS, "Doc"))
-    failures.extend(_missing_fragments(review_text, REQUIRED_REVIEW_SECTIONS, "Review"))
+    expected_commands = (
+        *COMMON_NOTEBOOK_COMMANDS,
+        Path(full_config_path).name,
+        Path(smoke_config_path).name,
+        Path(control_config_path).name,
+        "HNDSR_REQUIRE_WANDB_AUTH",
+    )
+    failures.extend(_missing_fragments(notebook_text, (f"# {version} HNDSR", *COMMON_NOTEBOOK_SECTIONS), "Notebook"))
+    failures.extend(_missing_fragments(notebook_text, expected_commands, "Notebook"))
+    failures.extend(_missing_fragments(doc_text, (f"# {version} HNDSR", *COMMON_DOC_SECTIONS), "Doc"))
+    failures.extend(_missing_fragments(review_text, (f"# {version} HNDSR Review", *COMMON_REVIEW_SECTIONS), "Review"))
 
     for config_path in (full_config_path, smoke_config_path, control_config_path):
         config = load_config(config_path)
         if config["dataset"]["name"] != "kaggle_4x":
-            failures.append(f"{config_path} must target kaggle_4x for vR.1.")
+            failures.append(f"{config_path} must target kaggle_4x for {version}.")
         if config["dataset"]["pairing_mode"] != "paired":
-            failures.append(f"{config_path} must use paired LR/HR loading for vR.1.")
+            failures.append(f"{config_path} must use paired LR/HR loading for {version}.")
         if config["dataset"]["scale_factor"] != 4:
             failures.append(f"{config_path} must keep a fixed 4x scale.")
         if not config["training"].get("checkpoint_name"):

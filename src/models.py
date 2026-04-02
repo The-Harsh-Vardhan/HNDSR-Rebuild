@@ -46,6 +46,23 @@ class ResidualTimeBlock(nn.Module):
         return h + self.shortcut(x)
 
 
+class ResidualImageBlock(nn.Module):
+    """Simple residual block for direct supervised SR refinement."""
+
+    def __init__(self, channels: int) -> None:
+        super().__init__()
+        groups = min(8, channels)
+        self.block = nn.Sequential(
+            nn.Conv2d(channels, channels, 3, padding=1),
+            nn.GroupNorm(groups, channels),
+            nn.SiLU(),
+            nn.Conv2d(channels, channels, 3, padding=1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + self.block(x)
+
+
 class ConditionalUNet(nn.Module):
     """Small conditional UNet for SR3-style smoke experiments."""
 
@@ -144,3 +161,33 @@ class SR3Baseline(nn.Module):
             predicted_noise = self.unet(sample, t, lr_upscaled)
             sample = self.scheduler.step(predicted_noise, int(timestep), sample)
         return sample.clamp(-1.0, 1.0)
+
+
+class SupervisedResidualBaseline(nn.Module):
+    """Lightweight supervised SR baseline over bicubic-upsampled inputs."""
+
+    def __init__(self, model_channels: int, num_blocks: int, residual_scale: float = 0.1) -> None:
+        super().__init__()
+        self.residual_scale = residual_scale
+        self.head = nn.Conv2d(3, model_channels, 3, padding=1)
+        self.body = nn.Sequential(*(ResidualImageBlock(model_channels) for _ in range(num_blocks)))
+        self.tail = nn.Conv2d(model_channels, 3, 3, padding=1)
+
+    def forward(self, lr_upscaled: torch.Tensor) -> torch.Tensor:
+        features = F.silu(self.head(lr_upscaled))
+        residual = self.tail(self.body(features)) * self.residual_scale
+        return (lr_upscaled + residual).clamp(-1.0, 1.0)
+
+    def training_step(self, lr_upscaled: torch.Tensor, hr: torch.Tensor) -> tuple[torch.Tensor, dict[str, float]]:
+        sr = self.forward(lr_upscaled)
+        loss = F.l1_loss(sr, hr)
+        stats = {
+            "prediction_mean": float(sr.mean().item()),
+            "prediction_std": float(sr.std().item()),
+        }
+        return loss, stats
+
+    @torch.no_grad()
+    def sample(self, lr_upscaled: torch.Tensor, inference_steps: int | None = None) -> torch.Tensor:
+        del inference_steps
+        return self.forward(lr_upscaled)

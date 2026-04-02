@@ -2,13 +2,13 @@
 """Kaggle notebook workflow helper for HNDSR ablation studies.
 
 Usage:
-    python kaggle_workflow.py preflight vR.1     # Validate the notebook handoff surface
-    python kaggle_workflow.py run vR.1           # Push, launch from editor, and monitor
-    python kaggle_workflow.py push vR.1          # Upload only
-    python kaggle_workflow.py ensure-secret vR.1
-    python kaggle_workflow.py run-editor vR.1
-    python kaggle_workflow.py status vR.1
-    python kaggle_workflow.py pull vR.1
+    python kaggle_workflow.py preflight vR.2     # Validate the notebook handoff surface
+    python kaggle_workflow.py run vR.2           # Push, launch from editor, and monitor
+    python kaggle_workflow.py push vR.2          # Upload only
+    python kaggle_workflow.py ensure-secret vR.2
+    python kaggle_workflow.py run-editor vR.2
+    python kaggle_workflow.py status vR.2
+    python kaggle_workflow.py pull vR.2
     python kaggle_workflow.py list
 """
 
@@ -340,7 +340,7 @@ def main() -> None:
         choices=["preflight", "run", "push", "ensure-secret", "run-editor", "status", "pull", "list"],
         help="run=push+editor-launch+monitor, push=upload only",
     )
-    parser.add_argument("version", nargs="?", help="Notebook version (e.g., vR.1)")
+    parser.add_argument("version", nargs="?", help="Notebook version (e.g., vR.2)")
     parser.add_argument("--interval", type=int, default=60, help="Monitor check interval (default: 60s)")
     parser.add_argument("--max-retries", type=int, default=3, help="Max auto-fix retries (default: 3)")
     parser.add_argument("--profile-dir", default=None, help="Persistent browser profile for Kaggle editor auth")

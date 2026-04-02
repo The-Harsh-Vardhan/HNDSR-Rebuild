@@ -1,0 +1,52 @@
+inherits: "configs/base.yaml"
+
+project:
+  group: "vR.2-supervised"
+  tags:
+    - vR.2
+    - scratch
+    - kaggle
+    - supervised
+    - residual
+
+tracking:
+  mode: "offline"
+  notes: "vR.2 scratch supervised residual Kaggle baseline"
+
+dataset:
+  family: kaggle
+  name: kaggle_4x
+  pairing_mode: paired
+  scale_factor: 4
+
+data:
+  patch_size: 64
+  batch_size: 4
+  num_workers: 0
+  val_limit: 16
+
+model:
+  kind: supervised_residual
+  model_channels: 64
+  num_blocks: 6
+  residual_scale: 0.1
+
+training:
+  epochs: 12
+  lr: 2.0e-4
+  weight_decay: 0.0
+  grad_clip: 1.0
+  max_train_batches: null
+  max_val_batches: 8
+  checkpoint_name: "vR.2_supervised_best.pt"
+
+diffusion:
+  num_timesteps: 1000
+  beta_start: 1.0e-4
+  beta_end: 0.02
+  inference_steps: 10
+
+evaluation:
+  sample_limit: 8
+  save_limit: 8
+  grid_name: "vR.2_supervised_grid.png"

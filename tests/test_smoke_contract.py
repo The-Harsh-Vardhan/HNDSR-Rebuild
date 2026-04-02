@@ -9,7 +9,7 @@ from src.dataset import (
     SyntheticSatellitePairDataset,
     build_loaders,
 )
-from src.models import SR3Baseline
+from src.models import SR3Baseline, SupervisedResidualBaseline
 from src.tracker import NullTracker
 from src import tracker as tracker_module
 from src.utils import REPO_ROOT, get_device, get_device_info, load_config
@@ -58,6 +58,17 @@ def test_sr3_forward_loss_contract():
     loss, stats = model.training_step(lr_upscaled, hr)
     assert loss.ndim == 0
     assert "timesteps_mean" in stats
+
+
+def test_supervised_residual_forward_loss_contract():
+    model = SupervisedResidualBaseline(model_channels=16, num_blocks=2, residual_scale=0.1)
+    lr_upscaled = torch.randn(2, 3, 64, 64)
+    hr = torch.randn(2, 3, 64, 64)
+    loss, stats = model.training_step(lr_upscaled, hr)
+    sample = model.sample(lr_upscaled)
+    assert loss.ndim == 0
+    assert tuple(sample.shape) == (2, 3, 64, 64)
+    assert "prediction_mean" in stats
 
 
 def test_null_tracker_accepts_logs():

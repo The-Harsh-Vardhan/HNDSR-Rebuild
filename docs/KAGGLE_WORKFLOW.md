@@ -6,11 +6,11 @@ The default workflow now separates upload from execution because Kaggle CLI meta
 
 ```bash
 cd <repo-root>
-python scripts/kaggle_workflow.py preflight vR.1
+python scripts/kaggle_workflow.py preflight vR.2
 python scripts/upload_repo_to_kaggle.py
-python scripts/kaggle_workflow.py push vR.1
-python scripts/kaggle_workflow.py run-editor vR.1
-python scripts/kaggle_workflow.py status vR.1
+python scripts/kaggle_workflow.py push vR.2
+python scripts/kaggle_workflow.py run-editor vR.2
+python scripts/kaggle_workflow.py status vR.2
 ```
 
 This will:
@@ -42,13 +42,13 @@ Treat `kaggle kernels push` as upload-only whenever a notebook requires `WANDB_A
 
 | Command | Description |
 |---------|-------------|
-| `preflight vR.1` | Validate notebook, docs, configs, and metadata before handoff |
-| `run vR.1` | Push, launch from the editor, then monitor |
-| `push vR.1` | Upload only (no execution trigger) |
-| `ensure-secret vR.1` | Open the editor and attach `WANDB_API_KEY` without launching a run |
-| `run-editor vR.1` | Open the editor, verify the secret is attached, and launch the run |
-| `status vR.1` | Check current status |
-| `pull vR.1` | Download results |
+| `preflight vR.2` | Validate notebook, docs, configs, and metadata before handoff |
+| `run vR.2` | Push, launch from the editor, then monitor |
+| `push vR.2` | Upload only (no execution trigger) |
+| `ensure-secret vR.2` | Open the editor and attach `WANDB_API_KEY` without launching a run |
+| `run-editor vR.2` | Open the editor, verify the secret is attached, and launch the run |
+| `status vR.2` | Check current status |
+| `pull vR.2` | Download results |
 | `list` | List available versions |
 
 ### Options for `run`, `run-editor`, and `ensure-secret`:
@@ -70,7 +70,7 @@ Two tracked metadata files define the Kaggle handoff contract:
 Rules:
 
 1. `kernel-metadata.json` is the only source of truth for the current Kaggle kernel slug, title, notebook file, and attached datasets.
-2. `code_file` must match the notebook version exactly, for example `vR.1_HNDSR.ipynb`.
+2. `code_file` must match the notebook version exactly, for example `vR.2_HNDSR.ipynb`.
 3. The code dataset source must remain `harshv777/hndsr-mini-project-code`.
 4. `dataset-metadata.json` is the only source of truth for packaging the repo dataset upload.
 5. Update metadata before pushing a new notebook version, not after a failed Kaggle run.
@@ -78,20 +78,20 @@ Rules:
 Validate locally before a handoff:
 
 ```bash
-python scripts/kaggle_workflow.py preflight vR.1
+python scripts/kaggle_workflow.py preflight vR.2
 ```
 
 Equivalent direct validator call:
 
 ```bash
 python scripts/validate_notebook_version.py ^
-  --version vR.1 ^
-  --notebook notebooks/versions/vR.1_HNDSR.ipynb ^
-  --doc docs/notebooks/vR.1_HNDSR.md ^
-  --review reports/reviews/vR.1_HNDSR.review.md ^
-  --config configs/phase1_sr3_vr1_kaggle.yaml ^
-  --smoke-config configs/phase1_sr3_vr1_smoke.yaml ^
-  --control-config configs/phase0_bicubic_vr1_kaggle_control.yaml
+  --version vR.2 ^
+  --notebook notebooks/versions/vR.2_HNDSR.ipynb ^
+  --doc docs/notebooks/vR.2_HNDSR.md ^
+  --review reports/reviews/vR.2_HNDSR.review.md ^
+  --config configs/phase2_supervised_vr2_kaggle.yaml ^
+  --smoke-config configs/phase2_supervised_vr2_smoke.yaml ^
+  --control-config configs/phase0_bicubic_vr2_kaggle_control.yaml
 ```
 
 ---
@@ -131,7 +131,7 @@ Then:
 1. Finish the current version review first.
 2. Scaffold the next version:
 ```bash
-python scripts/scaffold_version.py --from-version vR.1 --to-version vR.2 --activate-kaggle
+python scripts/scaffold_version.py --from-version vR.2 --to-version vR.3 --activate-kaggle
 ```
 3. Update configs or model changes only after the scaffold exists.
 4. Commit the scaffold before deeper edits.
@@ -140,9 +140,9 @@ python scripts/scaffold_version.py --from-version vR.1 --to-version vR.2 --activ
 Edit `notebooks/versions/kernel-metadata.json`:
 ```json
 {
-  "id": "harshv777/vr-2-hndsr-sr3-baseline",  // Update slug
-  "title": "vR.2 HNDSR SR3 Baseline",          // Update title
-  "code_file": "vR.2_HNDSR.ipynb",             // Update file
+  "id": "harshv777/vr-3-hndsr-sr3-baseline",  // Update slug
+  "title": "vR.3 HNDSR SR3 Baseline",          // Update title
+  "code_file": "vR.3_HNDSR.ipynb",             // Update file
   ...
 }
 ```
@@ -179,13 +179,13 @@ The notebook or validator is still using the attached repo dataset directly inst
 
 ### "No paired images found in data/kaggle_4x/HR_0.5m and data/kaggle_4x/LR_2m"
 Kaggle mounted the image dataset, but not in the flat repo-local layout.
-1. Stay on `vR.1`; this is a Kaggle plumbing issue, not a new research version.
+1. Stay on the current version; this is a Kaggle plumbing issue, not a new research version.
 2. Re-upload the latest repo dataset so the runtime loader patch is attached.
 3. Re-push the same notebook version after the dataset upload finishes.
 
 ### "CUDA error: no kernel image is available for execution on the device"
 Kaggle exposed a GPU that the bundled PyTorch build cannot actually execute.
-1. Stay on `vR.1`; this is a runtime compatibility issue, not a new research version.
+1. Stay on the current version; this is a runtime compatibility issue, not a new research version.
 2. Do not fake a metadata-level `T4` selection; Kaggle does not support it.
 3. Prefer the runtime compatibility policy first: keep GPU enabled, log the assigned device, and let the scripts switch into `cuda-compat` mode on older GPUs.
 4. Only attempt a runtime torch reinstall if compatibility mode still fails and the phase gate truly requires GPU throughput.
@@ -200,7 +200,7 @@ Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel
 
 ### W&B Not Logging
 1. Verify the Kaggle secret `WANDB_API_KEY` exists.
-2. Use `python scripts/kaggle_workflow.py ensure-secret vR.1` to attach the secret to the notebook editor before the next run.
+2. Use `python scripts/kaggle_workflow.py ensure-secret vR.2` to attach the secret to the notebook editor before the next run.
 3. Check notebook cell output for "authenticated online tracking is now enforced".
 4. If the key is missing or tracking stays offline, decline the run and redo it. Do not accept the run as valid evidence.
 
@@ -216,8 +216,8 @@ This is the current Kaggle limitation that motivated the editor automation path.
 
 | Command | Action |
 |---------|--------|
-| `python scripts/kaggle_workflow.py status vR.1` | Check run status |
-| `python scripts/kaggle_workflow.py pull vR.1` | Download results |
+| `python scripts/kaggle_workflow.py status vR.2` | Check run status |
+| `python scripts/kaggle_workflow.py pull vR.2` | Download results |
 | `python scripts/kaggle_workflow.py list` | List available versions |
 | `python scripts/upload_repo_to_kaggle.py` | Update repo dataset |
 | `kaggle datasets list --mine` | List your datasets |

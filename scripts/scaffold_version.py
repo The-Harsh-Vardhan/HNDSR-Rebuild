@@ -12,13 +12,23 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.utils import REPO_ROOT
-from src.versioning import default_contract_paths, default_kernel_slug, default_kernel_title, notebook_stem
+from src.versioning import default_contract_paths, default_kernel_slug, default_kernel_title, lane_for_version, notebook_stem
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Scaffold the next notebook version")
     parser.add_argument("--from-version", required=True, help="Existing version, for example vR.1")
     parser.add_argument("--to-version", required=True, help="New version, for example vR.2")
+    parser.add_argument(
+        "--from-lane",
+        default=None,
+        help="Optional source lane override, for example sr3 or supervised",
+    )
+    parser.add_argument(
+        "--to-lane",
+        default=None,
+        help="Optional target lane override, for example sr3 or supervised",
+    )
     parser.add_argument(
         "--activate-kaggle",
         action="store_true",
@@ -41,8 +51,10 @@ def replace_text(path: Path, replacements: list[tuple[str, str]]) -> None:
 
 def main() -> None:
     args = parse_args()
-    source = default_contract_paths(args.from_version)
-    target = default_contract_paths(args.to_version)
+    from_lane = args.from_lane or lane_for_version(args.from_version)
+    to_lane = args.to_lane or lane_for_version(args.to_version)
+    source = default_contract_paths(args.from_version, lane=from_lane)
+    target = default_contract_paths(args.to_version, lane=to_lane)
 
     for path in source.values():
         resolved = REPO_ROOT / path
@@ -70,8 +82,8 @@ def main() -> None:
         metadata_path = REPO_ROOT / "notebooks/versions/kernel-metadata.json"
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         owner = metadata["id"].split("/", 1)[0]
-        metadata["id"] = f"{owner}/{default_kernel_slug(args.to_version)}"
-        metadata["title"] = default_kernel_title(args.to_version)
+        metadata["id"] = f"{owner}/{default_kernel_slug(args.to_version, lane=to_lane)}"
+        metadata["title"] = default_kernel_title(args.to_version, lane=to_lane)
         metadata["code_file"] = f"{notebook_stem(args.to_version)}.ipynb"
         metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
         print("Updated notebooks/versions/kernel-metadata.json")
