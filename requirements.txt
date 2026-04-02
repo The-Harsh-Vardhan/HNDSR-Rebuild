@@ -1,0 +1,10 @@
+numpy
+Pillow
+PyYAML
+pytest
+scikit-image
+torch
+torchvision
+tqdm
+wandb
+lpips

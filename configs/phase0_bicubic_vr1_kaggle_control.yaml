@@ -1,0 +1,34 @@
+inherits: "configs/base.yaml"
+
+project:
+  group: "vR.1-control"
+  tags:
+    - vR.1
+    - scratch
+    - kaggle
+    - control
+    - bicubic
+
+tracking:
+  mode: "offline"
+  notes: "vR.1 Kaggle control-lane readiness baseline"
+
+dataset:
+  family: kaggle
+  name: kaggle_4x
+  pairing_mode: paired
+  scale_factor: 4
+
+data:
+  patch_size: 64
+  batch_size: 2
+  num_workers: 0
+  val_limit: 8
+
+model:
+  kind: bicubic
+
+evaluation:
+  sample_limit: 8
+  save_limit: 8
+  grid_name: "vR.1_kaggle_control_grid.png"

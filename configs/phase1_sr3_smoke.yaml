@@ -1,0 +1,32 @@
+inherits: "configs/base.yaml"
+
+project:
+  group: sr3
+  tags:
+    - smoke
+    - sr3
+
+dataset:
+  family: kaggle
+  name: kaggle_4x
+  pairing_mode: paired
+  scale_factor: 4
+
+model:
+  kind: sr3
+  model_channels: 32
+
+training:
+  epochs: 1
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  grad_clip: 1.0
+  max_train_batches: 4
+  max_val_batches: 2
+  checkpoint_name: "sr3_smoke.pt"
+
+diffusion:
+  num_timesteps: 1000
+  beta_start: 1.0e-4
+  beta_end: 0.02
+  inference_steps: 10

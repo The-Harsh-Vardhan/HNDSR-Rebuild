@@ -1,0 +1,16 @@
+{
+  "id": "harshv777/vr-1-hndsr-sr3-baseline",
+  "title": "vR.1 HNDSR SR3 Baseline",
+  "code_file": "vR.1_HNDSR.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [
+    "cristobaltudela/4x-satellite-image-super-resolution",
+    "harshv777/hndsr-mini-project-code"
+  ],
+  "competition_sources": [],
+  "kernel_sources": []
+}

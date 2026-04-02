@@ -1,0 +1,69 @@
+seed: 42
+
+project:
+  name: hndsr-research-track
+  group: bootstrap
+  tags:
+    - smoke
+
+paths:
+  artifact_root: "artifacts"
+  report_root: "reports"
+  datasets:
+    kaggle_4x:
+      hr_dir: "data/kaggle_4x/HR_0.5m"
+      lr_dir: "data/kaggle_4x/LR_2m"
+    ucmerced:
+      root_dir: "data/UCMerced/Images"
+    aid:
+      root_dir: "data/AID"
+    rsscn7:
+      root_dir: "data/RSSCN7"
+
+dataset:
+  family: kaggle
+  name: kaggle_4x
+  pairing_mode: paired
+  scale_factor: 4
+
+data:
+  patch_size: 64
+  batch_size: 2
+  num_workers: 0
+  val_split: 0.1
+  fixed_scale: 4
+  train_limit: null
+  val_limit: 8
+
+tracking:
+  enabled: true
+  mode: "offline"
+  project: "hndsr-research-track"
+  entity: null
+  notes: "Isolated HNDSR rebuild track"
+
+model:
+  kind: bicubic
+  model_channels: 32
+
+training:
+  epochs: 1
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  grad_clip: 1.0
+  max_train_batches: 4
+  max_val_batches: 2
+  checkpoint_name: "baseline.pt"
+
+diffusion:
+  num_timesteps: 1000
+  beta_start: 1.0e-4
+  beta_end: 0.02
+  inference_steps: 20
+
+evaluation:
+  split: "val"
+  sample_limit: 8
+  save_limit: 8
+  compute_lpips: true
+  grid_name: "comparison_grid.png"

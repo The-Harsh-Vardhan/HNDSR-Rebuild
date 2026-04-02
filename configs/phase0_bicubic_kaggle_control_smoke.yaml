@@ -1,0 +1,17 @@
+inherits: "configs/base.yaml"
+
+project:
+  group: kaggle-control
+  tags:
+    - smoke
+    - kaggle-control
+    - bicubic
+
+dataset:
+  family: kaggle
+  name: kaggle_4x
+  pairing_mode: paired
+  scale_factor: 4
+
+model:
+  kind: bicubic

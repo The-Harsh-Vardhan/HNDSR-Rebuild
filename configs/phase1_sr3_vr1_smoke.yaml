@@ -1,0 +1,28 @@
+inherits: "configs/phase1_sr3_vr1_kaggle.yaml"
+
+project:
+  group: "vR.1-smoke"
+  tags:
+    - vR.1
+    - scratch
+    - kaggle
+    - sr3
+    - smoke
+
+tracking:
+  mode: "offline"
+  notes: "vR.1 scratch SR3 Kaggle smoke check"
+
+data:
+  batch_size: 2
+  train_limit: 16
+  val_limit: 8
+
+training:
+  epochs: 1
+  max_train_batches: 4
+  max_val_batches: 2
+  checkpoint_name: "vR.1_sr3_smoke.pt"
+
+diffusion:
+  inference_steps: 8

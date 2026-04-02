@@ -1,0 +1,18 @@
+inherits: "configs/base.yaml"
+
+project:
+  group: neurop-diff-paper
+  tags:
+    - smoke
+    - paper-dataset
+    - ucmerced
+    - bicubic
+
+dataset:
+  family: paper
+  name: ucmerced
+  pairing_mode: synthetic_4x
+  scale_factor: 4
+
+model:
+  kind: bicubic
