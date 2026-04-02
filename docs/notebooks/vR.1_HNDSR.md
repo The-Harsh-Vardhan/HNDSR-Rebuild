@@ -31,7 +31,7 @@
    - `cristobaltudela/4x-satellite-image-super-resolution`
    - `harshv777/hndsr-mini-project-code`
 3. Run `python scripts/kaggle_workflow.py preflight vR.1` locally before handing the notebook to Kaggle.
-4. Run the runtime diagnostics cells first and confirm the notebook finds the repo under `/kaggle/input/hndsr-mini-project-code/Mini Project` or another valid repo-root mount before training.
+4. Run the runtime diagnostics cells first and confirm the notebook finds the repo under `/kaggle/input/hndsr-mini-project-code/Mini Project`, or extracts `/kaggle/input/hndsr-mini-project-code/Mini Project.zip` into `/kaggle/working/HNDSR-Rebuild`, before training.
 5. Confirm CUDA visibility if a GPU runtime is enabled.
 6. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
 7. Run the readiness validator cell before any training cell.
@@ -53,6 +53,7 @@
 - `vR.1` stays on the Kaggle control lane even though the broader rebuild track is paper-first.
 - W&B defaults to offline mode to keep the first Kaggle pass stable.
 - The notebook now checks both Kaggle working-directory mounts and the attached code-dataset mount before asserting the repo layout.
+- The attached Kaggle code dataset may arrive as `Mini Project.zip`; `vR.1` extracts that archive into `/kaggle/working/HNDSR-Rebuild` before continuing.
 - This notebook is allowed to orchestrate scripts, inspect configs, and render outputs. It is not allowed to carry unique model-training logic.
 
 ## Handoff Back For Review
