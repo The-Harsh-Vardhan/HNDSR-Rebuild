@@ -82,19 +82,25 @@ def resolve_python_executable() -> Path:
 
 def resolve_kaggle_cli() -> tuple[list[str], dict[str, str]]:
     """Resolve a Kaggle CLI invocation that survives Windows Store Python shims."""
+    def _with_utf8(env: dict[str, str]) -> dict[str, str]:
+        patched = dict(env)
+        patched.setdefault("PYTHONUTF8", "1")
+        patched.setdefault("PYTHONIOENCODING", "utf-8")
+        return patched
+
     if importlib.util.find_spec("kaggle.cli") is not None:
-        return [sys.executable, "-m", "kaggle.cli"], os.environ.copy()
+        return [sys.executable, "-m", "kaggle.cli"], _with_utf8(os.environ.copy())
 
     store_site_packages = _find_store_kaggle_site_packages()
     if store_site_packages is not None:
-        env = os.environ.copy()
+        env = _with_utf8(os.environ.copy())
         existing = env.get("PYTHONPATH")
         env["PYTHONPATH"] = (
             f"{store_site_packages}{os.pathsep}{existing}" if existing else str(store_site_packages)
         )
         return [sys.executable, "-m", "kaggle.cli"], env
 
-    return ["kaggle"], os.environ.copy()
+    return ["kaggle"], _with_utf8(os.environ.copy())
 
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:

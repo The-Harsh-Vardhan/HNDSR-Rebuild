@@ -32,13 +32,14 @@
    - `harshv777/hndsr-mini-project-code`
 3. Run `python scripts/kaggle_workflow.py preflight vR.1` locally before handing the notebook to Kaggle.
 4. Run the runtime diagnostics cells first and confirm the notebook finds the repo under one of the mounted `/kaggle/input/*` datasets, or extracts a mounted `Mini Project.zip` archive into `/kaggle/working/HNDSR-Rebuild`, before training.
-5. Confirm CUDA visibility if a GPU runtime is enabled.
-6. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
-7. Run the readiness validator cell before any training cell.
-8. Run the bicubic control evaluation to confirm the dataset and metrics path.
-9. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
-10. Run the full training and full evaluation cells only after the smoke path succeeds.
-11. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
+5. Re-run `python scripts/upload_repo_to_kaggle.py` after any same-version Kaggle runtime patch so the attached repo dataset matches the notebook shell.
+6. Confirm CUDA visibility if a GPU runtime is enabled.
+7. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
+8. Run the readiness validator cell before any training cell.
+9. Run the bicubic control evaluation to confirm the dataset and metrics path.
+10. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
+11. Run the full training and full evaluation cells only after the smoke path succeeds.
+12. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
 
 ## Expected Artifacts
 

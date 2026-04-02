@@ -100,6 +100,7 @@ Then:
 1. If the dataset does not exist yet, re-run with `--create`
 2. Confirm the updated version appears at `harshv777/hndsr-mini-project-code`
 3. Keep the dataset ID unchanged across notebook versions
+4. Re-upload the repo dataset after any same-version Kaggle runtime patch if the notebook still delegates to repo-owned scripts under `/kaggle/input`
 
 ### Step 3: Create New Notebook Version
 1. Finish the current version review first.
@@ -144,6 +145,12 @@ The repo dataset wasn't attached. Check:
 1. Does `kernel-metadata.json` include `harshv777/hndsr-mini-project-code` in `dataset_sources`?
 2. Did `upload_repo_to_kaggle.py` finish successfully for the current repo state?
 3. Push the kernel again: `kaggle kernels push -p "notebooks/versions"`
+
+### "Read-only file system" Under `/kaggle/input/.../artifacts`
+The notebook or validator is still using the attached repo dataset directly instead of a writable copy under `/kaggle/working`.
+1. Re-upload `harshv777/hndsr-mini-project-code` from the latest repo commit.
+2. Re-push the same notebook version after the dataset upload finishes.
+3. Confirm the runtime diagnostics show the repo under `/kaggle/working/HNDSR-Rebuild` before training starts.
 
 ### "Dataset not found" Error
 Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel-metadata.json` so both reference `harshv777/hndsr-mini-project-code`.
