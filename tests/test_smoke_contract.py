@@ -11,6 +11,7 @@ from src.dataset import (
 )
 from src.models import SR3Baseline
 from src.tracker import NullTracker
+from src import tracker as tracker_module
 from src.utils import REPO_ROOT, get_device, load_config
 
 
@@ -154,3 +155,15 @@ def test_get_device_falls_back_to_cpu_for_unsupported_cuda(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda index=0: (6, 0))
     assert str(get_device()) == "cpu"
+
+
+def test_tracker_requires_wandb_secret_when_enforced(monkeypatch):
+    config = load_config("configs/phase1_sr3_vr1_kaggle.yaml")
+    monkeypatch.setenv("HNDSR_REQUIRE_WANDB_AUTH", "1")
+    monkeypatch.delenv("WANDB_API_KEY", raising=False)
+    try:
+        tracker_module.init_tracker(config, "test-run", ".tmp/test-tracker")
+    except RuntimeError as exc:
+        assert "WANDB_API_KEY" in str(exc)
+    else:
+        raise AssertionError("Expected authenticated tracking to reject a missing WANDB secret.")

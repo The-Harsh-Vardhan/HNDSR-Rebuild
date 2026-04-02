@@ -17,6 +17,8 @@ This will:
 3. On failure: fetch error, attempt auto-fix, retry (up to 3 times)
 4. On success: notify you to pull results
 
+W&B is now a hard gate for versioned Kaggle runs. If the notebook does not find `WANDB_API_KEY` from Kaggle secrets, the run must be declined and restarted only after the secret is configured.
+
 ---
 
 ## Commands Reference
@@ -174,9 +176,9 @@ Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel
 - Check logs: `kaggle kernels output harshv777/vr-X-hndsr-sr3-baseline`
 
 ### W&B Not Logging
-1. Verify secret was added in Kaggle UI
-2. Check notebook cell output for "W&B key detected"
-3. If offline mode is okay, skip this
+1. Verify the Kaggle secret `WANDB_API_KEY` exists.
+2. Check notebook cell output for "authenticated online tracking is now enforced".
+3. If the key is missing or tracking stays offline, decline the run and redo it. Do not accept the run as valid evidence.
 
 ---
 

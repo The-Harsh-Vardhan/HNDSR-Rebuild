@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -66,11 +67,21 @@ def init_tracker(config: dict[str, Any], run_name: str, run_dir: str | Path) -> 
     tracking = config["tracking"]
     if not tracking.get("enabled", True):
         return NullTracker(run_dir)
+    mode = os.environ.get("HNDSR_WANDB_MODE", tracking.get("mode", "offline"))
+    require_auth = os.environ.get("HNDSR_REQUIRE_WANDB_AUTH") == "1" or mode == "online"
+    if mode == "disabled":
+        return NullTracker(run_dir)
+    if require_auth and not os.environ.get("WANDB_API_KEY"):
+        raise RuntimeError("WANDB_API_KEY is required for authenticated W&B tracking.")
     try:
         import wandb
-    except Exception:
+    except Exception as exc:
+        if require_auth:
+            raise RuntimeError("wandb must be installed for authenticated tracking.") from exc
         return NullTracker(run_dir)
     try:
+        if require_auth:
+            wandb.login(key=os.environ["WANDB_API_KEY"], relogin=True)
         run = wandb.init(
             project=tracking["project"],
             entity=tracking.get("entity"),
@@ -79,10 +90,12 @@ def init_tracker(config: dict[str, Any], run_name: str, run_dir: str | Path) -> 
             notes=tracking.get("notes"),
             name=run_name,
             config=flatten_config(config),
-            mode=tracking.get("mode", "offline"),
+            mode=mode,
             reinit=True,
             dir=str(run_dir),
         )
-    except Exception:
+    except Exception as exc:
+        if require_auth:
+            raise RuntimeError("Authenticated W&B tracking failed to initialize.") from exc
         return NullTracker(run_dir)
     return WandbTracker(run_dir, run)

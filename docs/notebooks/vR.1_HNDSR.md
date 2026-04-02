@@ -9,7 +9,7 @@
 - Dataset lane: Kaggle `4x-satellite-image-super-resolution`
 - Model lane: scratch `SR3` baseline from `src/models.py`
 - Control lane: bicubic evaluation using the same Kaggle split and smoke pack
-- Tracker mode: `offline` by default, upgrade to `online` only after W&B authentication is known-good
+- Tracker mode: authenticated `W&B online` only; decline the run if the Kaggle secret is missing
 
 ## Config Contract
 
@@ -35,11 +35,12 @@
 5. Re-run `python scripts/upload_repo_to_kaggle.py` after any same-version Kaggle runtime patch so the attached repo dataset matches the notebook shell.
 6. Confirm CUDA visibility if a GPU runtime is enabled.
 7. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
-8. Run the readiness validator cell before any training cell.
-9. Run the bicubic control evaluation to confirm the dataset and metrics path.
-10. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
-11. Run the full training and full evaluation cells only after the smoke path succeeds.
-12. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
+8. Confirm the W&B setup cell prints that authenticated online tracking is enforced. If it does not, stop and fix Kaggle secrets before continuing.
+9. Run the readiness validator cell before any training cell.
+10. Run the bicubic control evaluation to confirm the dataset and metrics path.
+11. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
+12. Run the full training and full evaluation cells only after the smoke path succeeds.
+13. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
 
 ## Expected Artifacts
 
@@ -47,12 +48,12 @@
 - Smoke checkpoint and metrics under `artifacts/vR.1-smoke/`
 - Full training checkpoint and metrics under `artifacts/vR.1-train/`
 - Full evaluation summary and image strips under `artifacts/vR.1-eval/`
-- W&B local tracker records under each run's `tracker/` directory
+- Authenticated W&B run links plus local tracker records under each run's `tracker/` directory
 
 ## Known Constraints
 
 - `vR.1` stays on the Kaggle control lane even though the broader rebuild track is paper-first.
-- W&B defaults to offline mode to keep the first Kaggle pass stable.
+- `vR.1` now rejects Kaggle execution unless the `WANDB_API_KEY` secret is available and online tracking is enforced before the first validator or training command.
 - The notebook now checks both Kaggle working-directory mounts and the attached code-dataset mount before asserting the repo layout.
 - The attached Kaggle code dataset may arrive under nested private-dataset paths such as `/kaggle/input/datasets/<owner>/<slug>` and may contain `Mini Project.zip`; `vR.1` now recurses through the Kaggle input tree and copies any discovered repo from the read-only input mount into `/kaggle/working/HNDSR-Rebuild` before validation or training writes artifacts.
 - The runtime scripts now auto-resolve the Kaggle image dataset even when Kaggle wraps the image folders inside duplicated directories such as `/kaggle/input/4x-satellite-image-super-resolution/HR_0.5m/HR_0.5m` and `/LR_2m/LR_2m`.

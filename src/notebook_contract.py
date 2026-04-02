@@ -31,6 +31,7 @@ REQUIRED_NOTEBOOK_COMMANDS = (
     "scripts/evaluate_run.py",
     "phase1_sr3_vr1_kaggle.yaml",
     "phase1_sr3_vr1_smoke.yaml",
+    "HNDSR_REQUIRE_WANDB_AUTH",
 )
 
 REQUIRED_DOC_SECTIONS = (
