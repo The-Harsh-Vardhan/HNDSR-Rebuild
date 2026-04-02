@@ -18,6 +18,8 @@
 6. Write the paired review and roast doc, then commit and push again.
 7. Fork the next version only after the current version is frozen.
 
+The governing research protocol lives in `program.md`. The tracked public run log lives in `benchmarks/kaggle_runs.tsv`.
+
 ## Paired Files
 
 - Notebook: `notebooks/versions/<stem>.ipynb`
@@ -27,6 +29,7 @@
 ## Git Discipline
 
 - Preserve broken Kaggle states with a dedicated commit before corrective edits.
+- Update `benchmarks/kaggle_runs.tsv` after every Kaggle cycle.
 - Use commit prefixes tied to the notebook stem:
   - `research(vR.1): scaffold kaggle notebook and docs`
   - `research(vR.1): sync kaggle runtime fixes`

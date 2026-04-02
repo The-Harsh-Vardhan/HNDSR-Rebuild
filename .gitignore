@@ -7,6 +7,7 @@ __pycache__/
 .venv/
 venv/
 env/
+pytest-cache-files-*/
 
 # Artifacts and temp files
 artifacts/

@@ -1,0 +1,2 @@
+version	kernel_id	status	local_commit	control_psnr	smoke_psnr	full_psnr	full_ssim	decision	notes
+vR.1	harshv777/vr-1-hndsr-sr3-baseline	preflight-pass	pending-commit				pending	Standalone repo published, local contract checks pass, and the first real Kaggle training run is queued next.

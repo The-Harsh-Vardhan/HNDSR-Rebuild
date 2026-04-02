@@ -10,7 +10,7 @@ from src.dataset import (
 )
 from src.models import SR3Baseline
 from src.tracker import NullTracker
-from src.utils import load_config
+from src.utils import REPO_ROOT, load_config
 
 
 def _write_fake_image(path: Path, color: tuple[int, int, int], size: tuple[int, int] = (96, 96)) -> None:
@@ -62,6 +62,12 @@ def test_null_tracker_accepts_logs():
     tracker.log_metrics({"loss": 1.0}, step=1)
     tracker.log_text("status", "ok")
     tracker.finish()
+
+
+def test_repo_root_resolves_the_standalone_repo():
+    assert (REPO_ROOT / "README.md").exists()
+    assert (REPO_ROOT / "configs" / "base.yaml").exists()
+    assert (REPO_ROOT / "scripts" / "kaggle_workflow.py").exists()
 
 
 def test_synthetic_dataset_generates_deterministic_4x_pair():

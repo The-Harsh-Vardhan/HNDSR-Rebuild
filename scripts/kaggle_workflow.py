@@ -2,6 +2,7 @@
 """Kaggle notebook workflow helper for HNDSR ablation studies.
 
 Usage:
+    python kaggle_workflow.py preflight vR.1   # Validate the notebook handoff surface
     python kaggle_workflow.py run vR.1         # Push and monitor (DEFAULT)
     python kaggle_workflow.py push vR.1        # Push only (no monitoring)
     python kaggle_workflow.py status vR.1      # Check run status
@@ -17,11 +18,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.kaggle_contract import load_kernel_metadata, validate_kernel_metadata
+from src.kaggle_contract import CODE_DATASET_ID, load_kernel_metadata, validate_kernel_metadata
+from src.utils import REPO_ROOT
+from src.versioning import default_contract_paths, notebook_stem
 
-REPO_ROOT = Path(__file__).resolve().parents[2].parent
-NOTEBOOKS_DIR = REPO_ROOT / "research_tracks" / "hndsr_rebuild" / "notebooks" / "versions"
-RESULTS_DIR = REPO_ROOT / "research_tracks" / "hndsr_rebuild" / "artifacts" / "kaggle_outputs"
+NOTEBOOKS_DIR = REPO_ROOT / "notebooks" / "versions"
+RESULTS_DIR = REPO_ROOT / "artifacts" / "kaggle_outputs"
 SCRIPTS_DIR = Path(__file__).parent
 
 
@@ -38,6 +40,47 @@ def load_validated_kernel_metadata(version: str) -> dict:
             print(f"ERROR: {failure}")
         sys.exit(1)
     return metadata
+
+
+def cmd_preflight(version: str) -> None:
+    """Validate the notebook contract and print the Kaggle handoff surface."""
+    contract = default_contract_paths(version)
+    for label, relative_path in contract.items():
+        resolved = REPO_ROOT / relative_path
+        if not resolved.exists():
+            print(f"ERROR: Missing {label} file: {resolved}")
+            sys.exit(1)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPTS_DIR / "validate_notebook_version.py"),
+            "--version",
+            version,
+            "--notebook",
+            str(contract["notebook"]),
+            "--doc",
+            str(contract["doc"]),
+            "--review",
+            str(contract["review"]),
+            "--config",
+            str(contract["full_config"]),
+            "--smoke-config",
+            str(contract["smoke_config"]),
+            "--control-config",
+            str(contract["control_config"]),
+        ],
+        cwd=REPO_ROOT,
+    )
+    if result.returncode != 0:
+        sys.exit(result.returncode)
+
+    metadata = load_validated_kernel_metadata(version)
+    print("")
+    print(f"Notebook stem: {notebook_stem(version)}")
+    print(f"Kernel ID: {metadata['id']}")
+    print(f"Code dataset source: {CODE_DATASET_ID}")
+    print(f"Kaggle notebook directory: {NOTEBOOKS_DIR}")
 
 
 def cmd_push(version: str) -> bool:
@@ -117,7 +160,7 @@ def cmd_list() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Kaggle workflow helper")
-    parser.add_argument("command", choices=["run", "push", "status", "pull", "list"],
+    parser.add_argument("command", choices=["preflight", "run", "push", "status", "pull", "list"],
                         help="run=push+monitor, push=push only")
     parser.add_argument("version", nargs="?", help="Notebook version (e.g., vR.1)")
     parser.add_argument("--interval", type=int, default=60, help="Monitor check interval (default: 60s)")
@@ -128,6 +171,8 @@ def main() -> None:
         cmd_list()
     elif args.version is None:
         parser.error(f"'{args.command}' requires a version argument")
+    elif args.command == "preflight":
+        cmd_preflight(args.version)
     elif args.command == "run":
         cmd_run(args.version, args.interval, args.max_retries)
     elif args.command == "push":

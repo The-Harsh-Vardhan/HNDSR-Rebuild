@@ -20,14 +20,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.kaggle_contract import load_kernel_metadata, validate_kernel_metadata
+from src.utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parents[2].parent
-NOTEBOOKS_DIR = REPO_ROOT / "research_tracks" / "hndsr_rebuild" / "notebooks" / "versions"
-RESULTS_DIR = REPO_ROOT / "research_tracks" / "hndsr_rebuild" / "artifacts" / "kaggle_outputs"
+NOTEBOOKS_DIR = REPO_ROOT / "notebooks" / "versions"
+RESULTS_DIR = REPO_ROOT / "artifacts" / "kaggle_outputs"
 
 # Known error patterns and their fixes
 ERROR_FIXES = {
-    r"AssertionError: Expected rebuild track under repo root": {
+    r"AssertionError: Expected .*repo under repo root": {
         "description": "Dataset not properly attached or outdated",
         "action": "update_dataset",
     },
@@ -241,7 +241,7 @@ def monitor_loop(
 
         if status == "complete":
             log("✓ Notebook completed successfully!")
-            log(f"Pull results with: python kaggle_workflow.py pull {version}")
+            log(f"Pull results with: python scripts/kaggle_workflow.py pull {version}")
             return True
 
         elif status == "error":

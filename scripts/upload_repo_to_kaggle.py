@@ -11,9 +11,9 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.kaggle_contract import load_dataset_metadata, validate_dataset_metadata
+from src.utils import REPO_ROOT
 
-REPO_ROOT = Path(__file__).resolve().parents[2].parent
-DATASET_META_SRC = REPO_ROOT / "research_tracks" / "hndsr_rebuild" / "kaggle" / "dataset-metadata.json"
+DATASET_META_SRC = REPO_ROOT / "kaggle" / "dataset-metadata.json"
 
 
 def run(args: list[str], **kwargs) -> subprocess.CompletedProcess:

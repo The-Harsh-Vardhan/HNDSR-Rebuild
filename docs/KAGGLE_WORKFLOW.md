@@ -5,7 +5,9 @@
 The default workflow pushes and monitors automatically with auto-fix:
 
 ```bash
-cd "c:/Users/harsh/OneDrive - Indian Institute of Information Technology, Nagpur/IIIT Nagpur/5th Semester/Mini Project"
+cd <repo-root>
+python scripts/kaggle_workflow.py preflight vR.1
+python scripts/upload_repo_to_kaggle.py
 python scripts/kaggle_workflow.py run vR.1
 ```
 
@@ -21,6 +23,7 @@ This will:
 
 | Command | Description |
 |---------|-------------|
+| `preflight vR.1` | Validate notebook, docs, configs, and metadata before handoff |
 | `run vR.1` | **DEFAULT**: Push + monitor with auto-fix |
 | `push vR.1` | Push only (no monitoring) |
 | `status vR.1` | Check current status |
@@ -51,6 +54,12 @@ Rules:
 Validate locally before a handoff:
 
 ```bash
+python scripts/kaggle_workflow.py preflight vR.1
+```
+
+Equivalent direct validator call:
+
+```bash
 python scripts/validate_notebook_version.py ^
   --version vR.1 ^
   --notebook notebooks/versions/vR.1_HNDSR.ipynb ^
@@ -79,11 +88,11 @@ The monitor detects these errors and attempts fixes:
 ## Running Future Ablations (vR.2, vR.3, etc.)
 
 ### Step 1: Make Code Changes Locally
-Edit configs, models, or scripts in your repo.
+Edit configs, models, or scripts in your repo. Keep the change inside the current version unless the benchmark contract itself changes.
 
 ### Step 2: Update Repo Dataset
 ```bash
-cd "c:/Users/harsh/OneDrive - Indian Institute of Information Technology, Nagpur/IIIT Nagpur/5th Semester/Mini Project"
+cd <repo-root>
 python scripts/upload_repo_to_kaggle.py
 ```
 
@@ -93,10 +102,13 @@ Then:
 3. Keep the dataset ID unchanged across notebook versions
 
 ### Step 3: Create New Notebook Version
-1. Copy `vR.1_HNDSR.ipynb` → `vR.2_HNDSR.ipynb`
-2. Update configs in the notebook (if needed)
-3. Update the notebook title cell to `# vR.2 HNDSR`
-4. Commit to git
+1. Finish the current version review first.
+2. Scaffold the next version:
+```bash
+python scripts/scaffold_version.py --from-version vR.1 --to-version vR.2 --activate-kaggle
+```
+3. Update configs or model changes only after the scaffold exists.
+4. Commit the scaffold before deeper edits.
 
 ### Step 4: Update Kernel Metadata
 Edit `notebooks/versions/kernel-metadata.json`:
@@ -163,11 +175,11 @@ Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel
 
 ## Default Workflow (Ablation Study)
 
-1. **Code** → Make changes locally
+1. **Preflight** → `python scripts/kaggle_workflow.py preflight vR.X`
 2. **Upload** → `python scripts/upload_repo_to_kaggle.py`
-4. **Metadata** → Update `kernel-metadata.json` with new version info
-5. **Push** → `python scripts/kaggle_workflow.py push vR.X`
-6. **Wait** → 30-60 minutes for full training
-7. **Pull** → `python scripts/kaggle_workflow.py pull vR.X`
-8. **Analyze** → Check metrics JSONs and sample images
-9. **Repeat** → Go to step 1 for next ablation
+3. **Push** → `python scripts/kaggle_workflow.py push vR.X`
+4. **Wait** → 30-60 minutes for full training
+5. **Pull** → `python scripts/kaggle_workflow.py pull vR.X`
+6. **Log** → Update `benchmarks/kaggle_runs.tsv`
+7. **Review** → Update `reports/reviews/<stem>.review.md`
+8. **Decide** → Keep, patch, or promote

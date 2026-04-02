@@ -30,14 +30,15 @@
 2. Attach both datasets declared in `notebooks/versions/kernel-metadata.json`:
    - `cristobaltudela/4x-satellite-image-super-resolution`
    - `harshv777/hndsr-mini-project-code`
-3. Run the runtime diagnostics cells first and confirm the notebook finds the repo under `/kaggle/input/hndsr-mini-project-code/Mini Project` before training.
-4. Confirm CUDA visibility if a GPU runtime is enabled.
-5. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
-6. Run the readiness validator cell before any training cell.
-7. Run the bicubic control evaluation to confirm the dataset and metrics path.
-8. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
-9. Run the full training and full evaluation cells only after the smoke path succeeds.
-10. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
+3. Run `python scripts/kaggle_workflow.py preflight vR.1` locally before handing the notebook to Kaggle.
+4. Run the runtime diagnostics cells first and confirm the notebook finds the repo under `/kaggle/input/hndsr-mini-project-code/Mini Project` or another valid repo-root mount before training.
+5. Confirm CUDA visibility if a GPU runtime is enabled.
+6. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
+7. Run the readiness validator cell before any training cell.
+8. Run the bicubic control evaluation to confirm the dataset and metrics path.
+9. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
+10. Run the full training and full evaluation cells only after the smoke path succeeds.
+11. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
 
 ## Expected Artifacts
 

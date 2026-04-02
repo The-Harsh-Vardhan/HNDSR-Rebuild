@@ -7,3 +7,4 @@
   - `docs/notebooks/<stem>.md`
   - `reports/reviews/<stem>.review.md`
 - Run `scripts/validate_notebook_version.py` before handing a notebook to Kaggle.
+- Use `scripts/scaffold_version.py` to create the next immutable version after review.
