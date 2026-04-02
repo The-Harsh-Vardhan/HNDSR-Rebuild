@@ -2,6 +2,7 @@
 """Simpler Kaggle upload: create zip from git and upload."""
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -11,14 +12,20 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.kaggle_contract import load_dataset_metadata, validate_dataset_metadata
-from src.utils import REPO_ROOT
+from src.utils import REPO_ROOT, prepare_workspace_temp, resolve_kaggle_cli
 
 DATASET_META_SRC = REPO_ROOT / "kaggle" / "dataset-metadata.json"
 
 
 def run(args: list[str], **kwargs) -> subprocess.CompletedProcess:
-    print(f"$ {' '.join(str(a) for a in args)}")
-    return subprocess.run(args, capture_output=False, text=True, **kwargs)
+    command = list(args)
+    env = kwargs.pop("env", None)
+    if command and command[0] == "kaggle":
+        kaggle_prefix, kaggle_env = resolve_kaggle_cli()
+        command = [*kaggle_prefix, *command[1:]]
+        env = kaggle_env
+    print(f"$ {' '.join(str(a) for a in command)}")
+    return subprocess.run(command, capture_output=False, text=True, env=env, **kwargs)
 
 
 def ensure_safe_staging_dir(path: Path) -> None:
@@ -38,6 +45,7 @@ def main() -> None:
     # Use kaggle_staging directory (not .tmp - Kaggle CLI has issues with that)
     work_dir = REPO_ROOT / "kaggle_staging"
     ensure_safe_staging_dir(work_dir)
+    prepare_workspace_temp("kaggle_staging")
 
     failures = validate_dataset_metadata(load_dataset_metadata())
     if failures:
@@ -94,14 +102,13 @@ def main() -> None:
                     "-p", "."
                 ], cwd=work_dir, check=True)
 
-        print("\n✓ Upload complete!")
+        print("\nUpload complete.")
         print("  Dataset: harshv777/hndsr-mini-project-code")
     finally:
-        # Cleanup
-        # if work_dir.exists():
-        #     print(f"Cleaning up {work_dir}...")
-        #     shutil.rmtree(work_dir, ignore_errors=True)
-        pass
+        if os.environ.get("HNDSR_KEEP_KAGGLE_STAGING") == "1":
+            print(f"Keeping staging directory at {work_dir}")
+        elif work_dir.exists():
+            shutil.rmtree(work_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

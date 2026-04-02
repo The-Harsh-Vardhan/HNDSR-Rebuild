@@ -113,7 +113,6 @@ def validate_versioned_notebook(
     tracker.finish()
 
     try:
-        from . import dataset as _dataset  # noqa: F401
         from . import tracker as _tracker  # noqa: F401
         from . import utils as _utils  # noqa: F401
     except Exception as exc:

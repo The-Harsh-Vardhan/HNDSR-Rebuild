@@ -19,17 +19,23 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.kaggle_contract import CODE_DATASET_ID, load_kernel_metadata, validate_kernel_metadata
-from src.utils import REPO_ROOT
+from src.utils import REPO_ROOT, resolve_kaggle_cli, resolve_python_executable
 from src.versioning import default_contract_paths, notebook_stem
 
 NOTEBOOKS_DIR = REPO_ROOT / "notebooks" / "versions"
 RESULTS_DIR = REPO_ROOT / "artifacts" / "kaggle_outputs"
 SCRIPTS_DIR = Path(__file__).parent
+WORKFLOW_PYTHON = resolve_python_executable()
 
 
 def run_cmd(args: list[str], check: bool = True) -> subprocess.CompletedProcess:
-    print(f"$ {' '.join(args)}")
-    return subprocess.run(args, check=check)
+    command = args
+    env = None
+    if args and args[0] == "kaggle":
+        kaggle_prefix, env = resolve_kaggle_cli()
+        command = [*kaggle_prefix, *args[1:]]
+    print(f"$ {' '.join(command)}")
+    return subprocess.run(command, check=check, env=env)
 
 
 def load_validated_kernel_metadata(version: str) -> dict:
@@ -53,7 +59,7 @@ def cmd_preflight(version: str) -> None:
 
     result = subprocess.run(
         [
-            sys.executable,
+            str(WORKFLOW_PYTHON),
             str(SCRIPTS_DIR / "validate_notebook_version.py"),
             "--version",
             version,
@@ -81,6 +87,8 @@ def cmd_preflight(version: str) -> None:
     print(f"Kernel ID: {metadata['id']}")
     print(f"Code dataset source: {CODE_DATASET_ID}")
     print(f"Kaggle notebook directory: {NOTEBOOKS_DIR}")
+    if Path(sys.executable).resolve() != WORKFLOW_PYTHON.resolve():
+        print(f"Validation interpreter: {WORKFLOW_PYTHON}")
 
 
 def cmd_push(version: str) -> bool:
@@ -117,7 +125,7 @@ def cmd_run(version: str, interval: int = 60, max_retries: int = 3) -> None:
     # Start the monitor script
     monitor_script = SCRIPTS_DIR / "monitor_kaggle.py"
     result = subprocess.run([
-        sys.executable, str(monitor_script),
+        str(WORKFLOW_PYTHON), str(monitor_script),
         version,
         "--interval", str(interval),
         "--max-retries", str(max_retries),

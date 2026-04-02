@@ -20,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.kaggle_contract import load_kernel_metadata, validate_kernel_metadata
-from src.utils import REPO_ROOT
+from src.utils import REPO_ROOT, resolve_kaggle_cli
 
 NOTEBOOKS_DIR = REPO_ROOT / "notebooks" / "versions"
 RESULTS_DIR = REPO_ROOT / "artifacts" / "kaggle_outputs"
@@ -63,9 +63,15 @@ def run_cmd(
     **kwargs,
 ) -> subprocess.CompletedProcess:
     """Run a command and optionally capture output."""
+    command = args
+    env = kwargs.pop("env", None)
+    if args and args[0] == "kaggle":
+        kaggle_prefix, kaggle_env = resolve_kaggle_cli()
+        command = [*kaggle_prefix, *args[1:]]
+        env = kaggle_env
     if capture:
-        return subprocess.run(args, check=check, capture_output=True, text=True, **kwargs)
-    return subprocess.run(args, check=check, **kwargs)
+        return subprocess.run(command, check=check, capture_output=True, text=True, env=env, **kwargs)
+    return subprocess.run(command, check=check, env=env, **kwargs)
 
 
 def get_kernel_id(version: str) -> str:
@@ -168,7 +174,7 @@ def apply_fix(error_info: dict, version: str) -> bool:
             "--prefix=Mini Project/",
             "HEAD"
         ], cwd=REPO_ROOT)
-        log("  ⚠️  Manual step required: Upload hndsr-repo.zip as new dataset version on Kaggle")
+        log("  WARNING: Manual step required: Upload hndsr-repo.zip as new dataset version on Kaggle")
         log("  URL: https://www.kaggle.com/datasets/harshv777/hndsr-mini-project-code")
 
         # Wait for user confirmation
@@ -181,16 +187,16 @@ def apply_fix(error_info: dict, version: str) -> bool:
         if match:
             module = match.group(1)
             log(f"Fix: Need to add pip install for '{module}'")
-            log("  ⚠️  Manual step: Add '!pip install {module}' to notebook setup cell")
+            log(f"  WARNING: Manual step: Add '!pip install {module}' to notebook setup cell")
         return False
 
     elif action == "reduce_batch_size":
         log("Fix: CUDA OOM - need to reduce batch size in config")
-        log("  ⚠️  Manual step: Reduce batch_size in the config YAML")
+        log("  WARNING: Manual step: Reduce batch_size in the config YAML")
         return False
 
     elif action == "manual_fix_required":
-        log("⚠️  Manual fix required. Error details:")
+        log("WARNING: Manual fix required. Error details:")
         log("-" * 60)
         print(error_info.get("error_text", "No details available")[-1500:])
         log("-" * 60)
@@ -213,10 +219,10 @@ def push_notebook(version: str) -> bool:
         capture=True
     )
     if result.returncode == 0:
-        log("✓ Notebook pushed successfully")
+        log("Notebook pushed successfully")
         return True
     else:
-        log(f"✗ Push failed: {result.stderr}")
+        log(f"Push failed: {result.stderr}")
         return False
 
 
@@ -240,12 +246,12 @@ def monitor_loop(
         log(f"Status: {status.upper()}")
 
         if status == "complete":
-            log("✓ Notebook completed successfully!")
+            log("Notebook completed successfully.")
             log(f"Pull results with: python scripts/kaggle_workflow.py pull {version}")
             return True
 
         elif status == "error":
-            log("✗ Notebook failed with error")
+            log("Notebook failed with error")
 
             # Pull and parse error
             log_path = pull_logs(kernel_id, version)
