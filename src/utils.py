@@ -151,7 +151,20 @@ def get_device(explicit: str | None = None) -> torch.device:
     torch = _require_torch()
     if explicit:
         return torch.device(explicit)
-    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if not torch.cuda.is_available():
+        return torch.device("cpu")
+    try:
+        capability = torch.cuda.get_device_capability(0)
+    except Exception:
+        return torch.device("cpu")
+    if capability[0] < 7:
+        print(
+            "CUDA device capability "
+            f"{capability[0]}.{capability[1]} is unsupported by the current PyTorch build; "
+            "falling back to CPU."
+        )
+        return torch.device("cpu")
+    return torch.device("cuda")
 
 
 def _require_torch() -> Any:

@@ -159,6 +159,12 @@ Kaggle mounted the image dataset, but not in the flat repo-local layout.
 2. Re-upload the latest repo dataset so the runtime loader patch is attached.
 3. Re-push the same notebook version after the dataset upload finishes.
 
+### "CUDA error: no kernel image is available for execution on the device"
+Kaggle exposed a GPU that the bundled PyTorch build cannot actually execute.
+1. Stay on `vR.1`; this is a runtime compatibility issue, not a new research version.
+2. Prefer the conservative fix first: fall back to CPU automatically when the detected CUDA capability is below the current PyTorch support floor.
+3. Only attempt a runtime torch reinstall if CPU execution proves too slow for the current phase gate.
+
 ### "Dataset not found" Error
 Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel-metadata.json` so both reference `harshv777/hndsr-mini-project-code`.
 

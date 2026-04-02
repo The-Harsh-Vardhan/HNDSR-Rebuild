@@ -56,6 +56,7 @@
 - The notebook now checks both Kaggle working-directory mounts and the attached code-dataset mount before asserting the repo layout.
 - The attached Kaggle code dataset may arrive under nested private-dataset paths such as `/kaggle/input/datasets/<owner>/<slug>` and may contain `Mini Project.zip`; `vR.1` now recurses through the Kaggle input tree and copies any discovered repo from the read-only input mount into `/kaggle/working/HNDSR-Rebuild` before validation or training writes artifacts.
 - The runtime scripts now auto-resolve the Kaggle image dataset even when Kaggle wraps the image folders inside duplicated directories such as `/kaggle/input/4x-satellite-image-super-resolution/HR_0.5m/HR_0.5m` and `/LR_2m/LR_2m`.
+- Kaggle currently exposes a `Tesla P100` in this workflow, while the bundled PyTorch build only supports CUDA capability `7.0+`; the runtime therefore falls back to CPU automatically instead of crashing on the first bicubic interpolation call.
 - This notebook is allowed to orchestrate scripts, inspect configs, and render outputs. It is not allowed to carry unique model-training logic.
 
 ## Handoff Back For Review

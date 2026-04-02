@@ -11,7 +11,7 @@ from src.dataset import (
 )
 from src.models import SR3Baseline
 from src.tracker import NullTracker
-from src.utils import REPO_ROOT, load_config
+from src.utils import REPO_ROOT, get_device, load_config
 
 
 def _write_fake_image(path: Path, color: tuple[int, int, int], size: tuple[int, int] = (96, 96)) -> None:
@@ -148,3 +148,9 @@ def test_kaggle_nested_mount_layout_is_resolved(monkeypatch):
     sample = dataset[0]
     assert sample["name"] in {"tile_001", "tile_002"}
     assert sample["scale"] == 4
+
+
+def test_get_device_falls_back_to_cpu_for_unsupported_cuda(monkeypatch):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda index=0: (6, 0))
+    assert str(get_device()) == "cpu"
