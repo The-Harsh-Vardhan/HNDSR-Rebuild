@@ -13,6 +13,7 @@ from src.models import SR3Baseline
 from src.tracker import NullTracker
 from src import tracker as tracker_module
 from src.utils import REPO_ROOT, get_device, load_config
+from scripts.train_baseline import should_stop_after_batch
 
 
 def _write_fake_image(path: Path, color: tuple[int, int, int], size: tuple[int, int] = (96, 96)) -> None:
@@ -167,3 +168,9 @@ def test_tracker_requires_wandb_secret_when_enforced(monkeypatch):
         assert "WANDB_API_KEY" in str(exc)
     else:
         raise AssertionError("Expected authenticated tracking to reject a missing WANDB secret.")
+
+
+def test_null_max_train_batches_means_unbounded_training_loop():
+    assert should_stop_after_batch(batch_idx=0, max_batches=None) is False
+    assert should_stop_after_batch(batch_idx=3, max_batches=None) is False
+    assert should_stop_after_batch(batch_idx=3, max_batches=3) is True

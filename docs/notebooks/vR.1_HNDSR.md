@@ -10,6 +10,7 @@
 - Model lane: scratch `SR3` baseline from `src/models.py`
 - Control lane: bicubic evaluation using the same Kaggle split and smoke pack
 - Tracker mode: authenticated `W&B online` only; decline the run if the Kaggle secret is missing
+- Execution path: `kaggle kernels push` for upload, Kaggle editor launch for the actual secret-backed run
 
 ## Config Contract
 
@@ -31,16 +32,18 @@
    - `cristobaltudela/4x-satellite-image-super-resolution`
    - `harshv777/hndsr-mini-project-code`
 3. Run `python scripts/kaggle_workflow.py preflight vR.1` locally before handing the notebook to Kaggle.
-4. Run the runtime diagnostics cells first and confirm the notebook finds the repo under one of the mounted `/kaggle/input/*` datasets, or extracts a mounted `Mini Project.zip` archive into `/kaggle/working/HNDSR-Rebuild`, before training.
-5. Re-run `python scripts/upload_repo_to_kaggle.py` after any same-version Kaggle runtime patch so the attached repo dataset matches the notebook shell.
-6. Confirm CUDA visibility if a GPU runtime is enabled.
-7. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
-8. Confirm the W&B setup cell prints that authenticated online tracking is enforced. If it does not, stop and fix Kaggle secrets before continuing.
-9. Run the readiness validator cell before any training cell.
-10. Run the bicubic control evaluation to confirm the dataset and metrics path.
-11. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
-12. Run the full training and full evaluation cells only after the smoke path succeeds.
-13. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
+4. Push the latest repo snapshot with `python scripts/upload_repo_to_kaggle.py`, then upload the notebook metadata with `python scripts/kaggle_workflow.py push vR.1`.
+5. Launch the actual run with `python scripts/kaggle_workflow.py run-editor vR.1`. Do not rely on CLI-triggered execution when `WANDB_API_KEY` is required.
+6. Run the runtime diagnostics cells first and confirm the notebook finds the repo under one of the mounted `/kaggle/input/*` datasets, or extracts a mounted `Mini Project.zip` archive into `/kaggle/working/HNDSR-Rebuild`, before training.
+7. Re-run `python scripts/upload_repo_to_kaggle.py` after any same-version Kaggle runtime patch so the attached repo dataset matches the notebook shell.
+8. Confirm CUDA visibility if a GPU runtime is enabled.
+9. Leave the repo-root debug output in place for the first Kaggle pass; it is there to catch bad dataset mounts early.
+10. Confirm the W&B setup cell prints that authenticated online tracking is enforced. If it does not, stop and fix Kaggle secrets before continuing.
+11. Run the readiness validator cell before any training cell.
+12. Run the bicubic control evaluation to confirm the dataset and metrics path.
+13. Run the smoke training cell to confirm script, checkpoint, and evaluation wiring.
+14. Run the full training and full evaluation cells only after the smoke path succeeds.
+15. Export the executed notebook, the generated metrics JSON, the comparison grid, and the best checkpoint path back into the repo workflow for review.
 
 ## Expected Artifacts
 
@@ -54,10 +57,12 @@
 
 - `vR.1` stays on the Kaggle control lane even though the broader rebuild track is paper-first.
 - `vR.1` now rejects Kaggle execution unless the `WANDB_API_KEY` secret is available and online tracking is enforced before the first validator or training command.
+- Kaggle CLI upload metadata does not currently expose notebook secrets, so the authoritative run launch must come from the Kaggle editor path after the secret is attached.
 - The notebook now checks both Kaggle working-directory mounts and the attached code-dataset mount before asserting the repo layout.
 - The attached Kaggle code dataset may arrive under nested private-dataset paths such as `/kaggle/input/datasets/<owner>/<slug>` and may contain `Mini Project.zip`; `vR.1` now recurses through the Kaggle input tree and copies any discovered repo from the read-only input mount into `/kaggle/working/HNDSR-Rebuild` before validation or training writes artifacts.
 - The runtime scripts now auto-resolve the Kaggle image dataset even when Kaggle wraps the image folders inside duplicated directories such as `/kaggle/input/4x-satellite-image-super-resolution/HR_0.5m/HR_0.5m` and `/LR_2m/LR_2m`.
 - Kaggle currently exposes a `Tesla P100` in this workflow, while the bundled PyTorch build only supports CUDA capability `7.0+`; the runtime therefore falls back to CPU automatically instead of crashing on the first bicubic interpolation call.
+- `configs/phase1_sr3_vr1_kaggle.yaml` keeps `max_train_batches: null` by design; the training loop must interpret that as "unbounded" rather than crashing on a null comparison.
 - This notebook is allowed to orchestrate scripts, inspect configs, and render outputs. It is not allowed to carry unique model-training logic.
 
 ## Handoff Back For Review

@@ -1,23 +1,34 @@
 # Kaggle Workflow Guide
 
-## Quick Start (Default Workflow)
+## Quick Start (Secret-Aware Workflow)
 
-The default workflow pushes and monitors automatically with auto-fix:
+The default workflow now separates upload from execution because Kaggle CLI metadata does not support attaching notebook secrets:
 
 ```bash
 cd <repo-root>
 python scripts/kaggle_workflow.py preflight vR.1
 python scripts/upload_repo_to_kaggle.py
-python scripts/kaggle_workflow.py run vR.1
+python scripts/kaggle_workflow.py push vR.1
+python scripts/kaggle_workflow.py run-editor vR.1
+python scripts/kaggle_workflow.py status vR.1
 ```
 
 This will:
-1. Push the notebook to Kaggle
-2. Monitor status every 60 seconds
-3. On failure: fetch error, attempt auto-fix, retry (up to 3 times)
-4. On success: notify you to pull results
+1. Upload the notebook and metadata with `kaggle kernels push`
+2. Launch the real execution from the Kaggle editor so attached secrets are available
+3. Keep `status` and `pull` on the Kaggle CLI after the run starts
+4. Preserve the existing monitor path for retries and log collection
 
 W&B is now a hard gate for versioned Kaggle runs. If the notebook does not find `WANDB_API_KEY` from Kaggle secrets, the run must be declined and restarted only after the secret is configured.
+
+### Why `run-editor` Exists
+
+The editor-backed path is not a preference; it is a platform constraint.
+
+- Kaggle's official kernel metadata format has no field for notebook secrets: `https://github.com/Kaggle/kaggle-api/blob/main/docs/kernels_metadata.md`
+- Kaggle's own CLI issue tracker still points secret management back to `Notebook Editor -> Add-ons -> Secrets`: `https://github.com/Kaggle/kaggle-api/issues/582`
+
+Treat `kaggle kernels push` as upload-only whenever a notebook requires `WANDB_API_KEY` or any other secret-backed runtime state.
 
 ---
 
@@ -26,15 +37,20 @@ W&B is now a hard gate for versioned Kaggle runs. If the notebook does not find 
 | Command | Description |
 |---------|-------------|
 | `preflight vR.1` | Validate notebook, docs, configs, and metadata before handoff |
-| `run vR.1` | **DEFAULT**: Push + monitor with auto-fix |
-| `push vR.1` | Push only (no monitoring) |
+| `run vR.1` | Push, launch from the editor, then monitor |
+| `push vR.1` | Upload only (no execution trigger) |
+| `ensure-secret vR.1` | Open the editor and attach `WANDB_API_KEY` without launching a run |
+| `run-editor vR.1` | Open the editor, verify the secret is attached, and launch the run |
 | `status vR.1` | Check current status |
 | `pull vR.1` | Download results |
 | `list` | List available versions |
 
-### Options for `run`:
+### Options for `run`, `run-editor`, and `ensure-secret`:
 - `--interval 60` - Check every N seconds (default: 60)
 - `--max-retries 3` - Max auto-fix attempts (default: 3)
+- `--profile-dir <path>` - Persistent browser profile used for Kaggle login/session reuse
+- `--channel msedge` - Browser channel passed to Playwright (default on Windows)
+- `--dry-run` - Print the planned browser command without launching it
 
 ---
 
@@ -177,8 +193,15 @@ Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel
 
 ### W&B Not Logging
 1. Verify the Kaggle secret `WANDB_API_KEY` exists.
-2. Check notebook cell output for "authenticated online tracking is now enforced".
-3. If the key is missing or tracking stays offline, decline the run and redo it. Do not accept the run as valid evidence.
+2. Use `python scripts/kaggle_workflow.py ensure-secret vR.1` to attach the secret to the notebook editor before the next run.
+3. Check notebook cell output for "authenticated online tracking is now enforced".
+4. If the key is missing or tracking stays offline, decline the run and redo it. Do not accept the run as valid evidence.
+
+### CLI Push Works But Secrets Do Not
+This is the current Kaggle limitation that motivated the editor automation path.
+1. Use `push` for upload only.
+2. Use `run-editor` for the actual launch.
+3. Keep the same persistent browser profile so Kaggle auth and notebook-level secret attachment survive between runs.
 
 ---
 
@@ -200,8 +223,9 @@ Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel
 1. **Preflight** → `python scripts/kaggle_workflow.py preflight vR.X`
 2. **Upload** → `python scripts/upload_repo_to_kaggle.py`
 3. **Push** → `python scripts/kaggle_workflow.py push vR.X`
-4. **Wait** → 30-60 minutes for full training
-5. **Pull** → `python scripts/kaggle_workflow.py pull vR.X`
-6. **Log** → Update `benchmarks/kaggle_runs.tsv`
-7. **Review** → Update `reports/reviews/<stem>.review.md`
-8. **Decide** → Keep, patch, or promote
+4. **Editor Run** → `python scripts/kaggle_workflow.py run-editor vR.X`
+5. **Wait** → 30-60 minutes for full training
+6. **Pull** → `python scripts/kaggle_workflow.py pull vR.X`
+7. **Log** → Update `benchmarks/kaggle_runs.tsv`
+8. **Review** → Update `reports/reviews/<stem>.review.md`
+9. **Decide** → Keep, patch, or promote

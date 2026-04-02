@@ -6,6 +6,7 @@ import json
 import importlib.util
 import os
 import random
+import shutil
 import sys
 import tempfile
 from copy import deepcopy
@@ -101,6 +102,24 @@ def resolve_kaggle_cli() -> tuple[list[str], dict[str, str]]:
         return [sys.executable, "-m", "kaggle.cli"], env
 
     return ["kaggle"], _with_utf8(os.environ.copy())
+
+
+def resolve_node_executable() -> str:
+    """Resolve the Node.js executable needed by browser-automation helpers."""
+    for candidate in ("node.exe", "node") if os.name == "nt" else ("node",):
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    raise RuntimeError("Node.js is required for the Kaggle editor automation path.")
+
+
+def resolve_npx_executable() -> str:
+    """Resolve the npx executable used to launch Playwright without a repo-local JS toolchain."""
+    for candidate in ("npx.cmd", "npx") if os.name == "nt" else ("npx",):
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    raise RuntimeError("npx is required for the Kaggle editor automation path.")
 
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:

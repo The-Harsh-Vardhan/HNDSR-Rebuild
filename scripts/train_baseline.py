@@ -42,7 +42,7 @@ def validate(model: SR3Baseline, val_loader, config: dict, device: torch.device)
     inference_steps = max(2, min(config["diffusion"]["inference_steps"], 4))
     with torch.no_grad():
         for batch_idx, batch in enumerate(val_loader):
-            if max_batches is not None and batch_idx >= max_batches:
+            if should_stop_after_batch(batch_idx, max_batches):
                 break
             hr = batch["hr"].to(device)
             scale = int(batch["scale"][0])
@@ -55,6 +55,11 @@ def validate(model: SR3Baseline, val_loader, config: dict, device: torch.device)
         "val_loss": float(sum(losses) / max(len(losses), 1)),
         "val_psnr": float(sum(psnr_values) / max(len(psnr_values), 1)),
     }
+
+
+def should_stop_after_batch(batch_idx: int, max_batches: int | None) -> bool:
+    """Return True when a bounded training or validation loop should stop."""
+    return max_batches is not None and batch_idx >= max_batches
 
 
 def train(config: dict, run_name: str, device: torch.device) -> dict[str, object]:
@@ -71,12 +76,13 @@ def train(config: dict, run_name: str, device: torch.device) -> dict[str, object
     best_val_loss = float("inf")
     best_checkpoint = dirs["checkpoints"] / config["training"]["checkpoint_name"]
     history: list[dict[str, float]] = []
+    max_train_batches = config["training"].get("max_train_batches")
     for epoch in range(config["training"]["epochs"]):
         model.train()
         train_losses: list[float] = []
         progress = tqdm(bundle.train_loader, desc=f"SR3 epoch {epoch + 1}", leave=False)
         for batch_idx, batch in enumerate(progress):
-            if batch_idx >= config["training"]["max_train_batches"]:
+            if should_stop_after_batch(batch_idx, max_train_batches):
                 break
             hr = batch["hr"].to(device)
             scale = int(batch["scale"][0])
