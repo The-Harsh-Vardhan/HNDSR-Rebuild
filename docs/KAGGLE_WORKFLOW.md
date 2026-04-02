@@ -19,6 +19,12 @@ This will:
 3. Keep `status` and `pull` on the Kaggle CLI after the run starts
 4. Preserve the existing monitor path for retries and log collection
 
+Important GPU note:
+
+- `kernel-metadata.json` can request `enable_gpu: true`, but Kaggle does not expose a metadata field to force `Tesla T4`.
+- Treat `T4` as the preferred benchmark GPU and `P100` as a compatibility path only.
+- The runtime now logs the assigned GPU name and uses a conservative CUDA compatibility mode when Kaggle lands on a legacy GPU such as `P100`.
+
 W&B is now a hard gate for versioned Kaggle runs. If the notebook does not find `WANDB_API_KEY` from Kaggle secrets, the run must be declined and restarted only after the secret is configured.
 
 ### Why `run-editor` Exists
@@ -180,8 +186,9 @@ Kaggle mounted the image dataset, but not in the flat repo-local layout.
 ### "CUDA error: no kernel image is available for execution on the device"
 Kaggle exposed a GPU that the bundled PyTorch build cannot actually execute.
 1. Stay on `vR.1`; this is a runtime compatibility issue, not a new research version.
-2. Prefer the conservative fix first: fall back to CPU automatically when the detected CUDA capability is below the current PyTorch support floor.
-3. Only attempt a runtime torch reinstall if CPU execution proves too slow for the current phase gate.
+2. Do not fake a metadata-level `T4` selection; Kaggle does not support it.
+3. Prefer the runtime compatibility policy first: keep GPU enabled, log the assigned device, and let the scripts switch into `cuda-compat` mode on older GPUs.
+4. Only attempt a runtime torch reinstall if compatibility mode still fails and the phase gate truly requires GPU throughput.
 
 ### "Dataset not found" Error
 Do not invent a new dataset name. Fix `kaggle/dataset-metadata.json` and `kernel-metadata.json` so both reference `harshv777/hndsr-mini-project-code`.

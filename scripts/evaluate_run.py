@@ -24,7 +24,7 @@ from src.metrics import (
 )
 from src.models import SR3Baseline
 from src.tracker import init_tracker
-from src.utils import describe_run_dirs, get_device, load_config, prepare_workspace_temp, set_seed, write_json
+from src.utils import describe_run_dirs, get_device_info, load_config, prepare_workspace_temp, set_seed, write_json
 
 
 def build_model(config: dict, device: torch.device, checkpoint: str | None) -> SR3Baseline | None:
@@ -53,7 +53,13 @@ def infer_sample(model: SR3Baseline | None, lr: torch.Tensor, scale: int, config
     return model.sample(lr_upscaled, inference_steps=config["diffusion"]["inference_steps"])
 
 
-def evaluate(config: dict, run_name: str, device: torch.device, checkpoint: str | None) -> dict[str, object]:
+def evaluate(
+    config: dict,
+    run_name: str,
+    device: torch.device,
+    checkpoint: str | None,
+    device_info: dict[str, object],
+) -> dict[str, object]:
     """Evaluate the selected baseline and export qualitative strips."""
     dirs = describe_run_dirs(config, run_name)
     tracker = init_tracker(config, run_name, dirs["tracker"])
@@ -93,6 +99,9 @@ def evaluate(config: dict, run_name: str, device: torch.device, checkpoint: str 
         "dataset_name": bundle.dataset_name,
         "pairing_mode": bundle.pairing_mode,
         "device": str(device),
+        "device_name": device_info["device_name"],
+        "device_mode": device_info["device_mode"],
+        "cuda_capability": device_info["cuda_capability"],
         "checkpoint": checkpoint,
         "psnr_mean": float(sum(psnr_values) / max(len(psnr_values), 1)),
         "ssim_mean": float(sum(ssim_values) / max(len(ssim_values), 1)),
@@ -121,8 +130,9 @@ def main() -> None:
     prepare_workspace_temp(config["paths"]["artifact_root"])
     set_seed(config["seed"])
     run_name = args.run_name or f"{config['project']['group']}-eval-{time.strftime('%Y%m%d-%H%M%S')}"
-    device = get_device(args.device)
-    summary = evaluate(config, run_name, device, args.checkpoint)
+    device_info = get_device_info(args.device)
+    device = device_info["device"]
+    summary = evaluate(config, run_name, device, args.checkpoint, device_info)
     print(f"Evaluation complete: PSNR={summary['psnr_mean']:.2f}, SSIM={summary['ssim_mean']:.4f}")
 
 

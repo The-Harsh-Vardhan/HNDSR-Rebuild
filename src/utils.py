@@ -165,25 +165,85 @@ def set_seed(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
 
 
-def get_device(explicit: str | None = None) -> torch.device:
-    """Pick a device conservatively for reproducible experiments."""
+def _configure_legacy_cuda(torch_module: Any) -> None:
+    """Disable aggressive CUDA fast paths when running on older GPUs."""
+    torch_module.backends.cudnn.benchmark = False
+    if hasattr(torch_module.backends.cuda, "matmul") and hasattr(torch_module.backends.cuda.matmul, "allow_tf32"):
+        torch_module.backends.cuda.matmul.allow_tf32 = False
+    if hasattr(torch_module.backends, "cudnn") and hasattr(torch_module.backends.cudnn, "allow_tf32"):
+        torch_module.backends.cudnn.allow_tf32 = False
+
+
+def get_device_info(explicit: str | None = None) -> dict[str, Any]:
+    """Describe the active device and apply conservative legacy-GPU settings when needed."""
     torch = _require_torch()
     if explicit:
-        return torch.device(explicit)
+        device = torch.device(explicit)
+        info = {
+            "device": device,
+            "device_name": str(device),
+            "device_mode": "explicit",
+            "cuda_capability": None,
+        }
+        if device.type == "cuda" and torch.cuda.is_available():
+            index = 0 if device.index is None else device.index
+            capability = torch.cuda.get_device_capability(index)
+            name = torch.cuda.get_device_name(index)
+            legacy = capability[0] < 7
+            if legacy:
+                _configure_legacy_cuda(torch)
+            info.update(
+                {
+                    "device_name": name,
+                    "device_mode": "cuda-compat" if legacy else "cuda",
+                    "cuda_capability": f"{capability[0]}.{capability[1]}",
+                }
+            )
+        print(f"Using explicit device override: {info['device']} ({info['device_mode']})")
+        return info
+
     if not torch.cuda.is_available():
-        return torch.device("cpu")
+        print("CUDA unavailable; using CPU.")
+        return {
+            "device": torch.device("cpu"),
+            "device_name": "cpu",
+            "device_mode": "cpu",
+            "cuda_capability": None,
+        }
+
     try:
         capability = torch.cuda.get_device_capability(0)
+        name = torch.cuda.get_device_name(0)
     except Exception:
-        return torch.device("cpu")
-    if capability[0] < 7:
+        print("CUDA is present but device details could not be queried; using CPU.")
+        return {
+            "device": torch.device("cpu"),
+            "device_name": "cpu",
+            "device_mode": "cpu-fallback",
+            "cuda_capability": None,
+        }
+
+    legacy = capability[0] < 7
+    if legacy:
+        _configure_legacy_cuda(torch)
         print(
-            "CUDA device capability "
-            f"{capability[0]}.{capability[1]} is unsupported by the current PyTorch build; "
-            "falling back to CPU."
+            "Using legacy CUDA compatibility mode on "
+            f"{name} (capability {capability[0]}.{capability[1]}). "
+            "Kaggle metadata cannot force T4, so treat this run as compatible but not preferred."
         )
-        return torch.device("cpu")
-    return torch.device("cuda")
+    else:
+        print(f"Using standard CUDA mode on {name} (capability {capability[0]}.{capability[1]}).")
+    return {
+        "device": torch.device("cuda"),
+        "device_name": name,
+        "device_mode": "cuda-compat" if legacy else "cuda",
+        "cuda_capability": f"{capability[0]}.{capability[1]}",
+    }
+
+
+def get_device(explicit: str | None = None) -> torch.device:
+    """Pick a device conservatively for reproducible experiments."""
+    return get_device_info(explicit)["device"]
 
 
 def _require_torch() -> Any:

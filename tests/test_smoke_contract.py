@@ -12,7 +12,7 @@ from src.dataset import (
 from src.models import SR3Baseline
 from src.tracker import NullTracker
 from src import tracker as tracker_module
-from src.utils import REPO_ROOT, get_device, load_config
+from src.utils import REPO_ROOT, get_device, get_device_info, load_config
 from scripts.train_baseline import should_stop_after_batch
 
 
@@ -152,10 +152,27 @@ def test_kaggle_nested_mount_layout_is_resolved(monkeypatch):
     assert sample["scale"] == 4
 
 
-def test_get_device_falls_back_to_cpu_for_unsupported_cuda(monkeypatch):
+def test_get_device_uses_cuda_compatibility_mode_for_legacy_gpu(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
     monkeypatch.setattr(torch.cuda, "get_device_capability", lambda index=0: (6, 0))
-    assert str(get_device()) == "cpu"
+    monkeypatch.setattr(torch.cuda, "get_device_name", lambda index=0: "Tesla P100")
+    info = get_device_info()
+    assert str(get_device()) == "cuda"
+    assert str(info["device"]) == "cuda"
+    assert info["device_name"] == "Tesla P100"
+    assert info["device_mode"] == "cuda-compat"
+    assert info["cuda_capability"] == "6.0"
+
+
+def test_get_device_uses_standard_cuda_mode_for_t4(monkeypatch):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda index=0: (7, 5))
+    monkeypatch.setattr(torch.cuda, "get_device_name", lambda index=0: "Tesla T4")
+    info = get_device_info()
+    assert str(info["device"]) == "cuda"
+    assert info["device_name"] == "Tesla T4"
+    assert info["device_mode"] == "cuda"
+    assert info["cuda_capability"] == "7.5"
 
 
 def test_tracker_requires_wandb_secret_when_enforced(monkeypatch):

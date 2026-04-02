@@ -28,7 +28,6 @@ from src.utils import (
     ensure_dir,
     resolve_kaggle_cli,
     resolve_node_executable,
-    resolve_npx_executable,
     resolve_python_executable,
 )
 from src.versioning import default_contract_paths, notebook_stem
@@ -102,6 +101,8 @@ def cmd_preflight(version: str) -> None:
     print(f"Kernel ID: {metadata['id']}")
     print(f"Code dataset source: {CODE_DATASET_ID}")
     print(f"Kaggle notebook directory: {NOTEBOOKS_DIR}")
+    print("GPU policy: Kaggle metadata can enable GPU, but it cannot force Tesla T4 over Tesla P100.")
+    print("Acceptance target: prefer T4 for benchmark runs; if Kaggle assigns P100, the runtime logs CUDA compatibility mode.")
     if Path(sys.executable).resolve() != WORKFLOW_PYTHON.resolve():
         print(f"Validation interpreter: {WORKFLOW_PYTHON}")
 
@@ -137,11 +138,8 @@ def build_editor_runner_command(
 ) -> list[str]:
     """Build the Node/Playwright command for secret-aware Kaggle editor automation."""
     metadata = load_validated_kernel_metadata(version)
+    # Run node directly now that playwright is installed locally
     command = [
-        resolve_npx_executable(),
-        "--yes",
-        "--package",
-        "playwright",
         resolve_node_executable(),
         str(SCRIPTS_DIR / "kaggle_editor_runner.mjs"),
         "--mode",

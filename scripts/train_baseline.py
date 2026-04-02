@@ -17,7 +17,7 @@ from src.dataset import build_loaders
 from src.metrics import bicubic_upscale, calculate_psnr
 from src.models import SR3Baseline
 from src.tracker import init_tracker
-from src.utils import describe_run_dirs, get_device, load_config, prepare_workspace_temp, set_seed, write_json
+from src.utils import describe_run_dirs, get_device_info, load_config, prepare_workspace_temp, set_seed, write_json
 
 
 def build_model(config: dict, device: torch.device) -> SR3Baseline:
@@ -62,7 +62,7 @@ def should_stop_after_batch(batch_idx: int, max_batches: int | None) -> bool:
     return max_batches is not None and batch_idx >= max_batches
 
 
-def train(config: dict, run_name: str, device: torch.device) -> dict[str, object]:
+def train(config: dict, run_name: str, device: torch.device, device_info: dict[str, object]) -> dict[str, object]:
     """Train the selected baseline and persist the best checkpoint."""
     dirs = describe_run_dirs(config, run_name)
     tracker = init_tracker(config, run_name, dirs["tracker"])
@@ -112,6 +112,9 @@ def train(config: dict, run_name: str, device: torch.device) -> dict[str, object
         "dataset_name": bundle.dataset_name,
         "pairing_mode": bundle.pairing_mode,
         "device": str(device),
+        "device_name": device_info["device_name"],
+        "device_mode": device_info["device_mode"],
+        "cuda_capability": device_info["cuda_capability"],
         "train_size": bundle.train_size,
         "val_size": bundle.val_size,
         "best_checkpoint": str(best_checkpoint),
@@ -138,10 +141,11 @@ def main() -> None:
     prepare_workspace_temp(config["paths"]["artifact_root"])
     set_seed(config["seed"])
     run_name = args.run_name or f"{config['project']['group']}-{time.strftime('%Y%m%d-%H%M%S')}"
-    device = get_device(args.device)
+    device_info = get_device_info(args.device)
+    device = device_info["device"]
     if config["model"]["kind"] == "bicubic":
         raise ValueError("Use evaluate_run.py for the bicubic bootstrap baseline.")
-    summary = train(config, run_name, device)
+    summary = train(config, run_name, device, device_info)
     print(f"Saved best checkpoint to {summary['best_checkpoint']}")
 
 

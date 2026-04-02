@@ -14,8 +14,7 @@ def test_editor_runner_command_uses_playwright_wrapper():
         timeout_ms=120000,
         dry_run=True,
     )
-    assert "--package" in command
-    assert "playwright" in command
+    assert command[0].endswith("node.exe") or command[0] == "node"
     assert "kaggle_editor_runner.mjs" in " ".join(command)
     assert "--kernel-id" in command
     assert "--secret-name" in command
